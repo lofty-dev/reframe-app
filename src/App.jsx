@@ -247,7 +247,7 @@ export default function App() {
   const [editPs, setEditPs] = useState({});
 
   const [checkins, setCheckins] = useState(loadCheckins);
-  const [checkinDraft, setCheckinDraft] = useState({ mood: null, condition: null, sleep: null, memo: "" });
+  const [checkinDraft, setCheckinDraft] = useState({ mood: 5, condition: null, sleep: null, memo: "" });
 
   const [copings, setCopings] = useState(loadCopings);
   const [copingSort, setCopingSort] = useState("difficulty");
@@ -295,8 +295,8 @@ export default function App() {
     if (!checkinDraft.mood) return;
     const entry = { id: Date.now(), date: toDateStr(t.year, t.month, t.day), ...checkinDraft };
     setCheckins([entry, ...checkins.filter((c) => c.date !== entry.date)]);
-    setCheckinDraft({ mood: null, condition: null, sleep: null, memo: "" });
-    setView("list");
+    setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" });
+    setView("home");
   };
 
   const selectedDetail = records.find((r) => r.id === detailId);
@@ -430,7 +430,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <button onClick={() => { setCheckinDraft({ mood: null, condition: null, sleep: null, memo: "" }); setView("checkin"); }}
+            <button onClick={() => { setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" }); setView("checkin"); }}
               style={{ width: "100%", background: COLORS.successBg, border: `1px solid ${COLORS.accentSoft}`, borderRadius: 12, color: COLORS.accentText, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 20 }}>
               今日のチェックインをする
             </button>
