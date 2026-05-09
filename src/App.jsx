@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield } from "@tabler/icons-react";
 
 const COLORS = {
   bg: "#0f1117",
@@ -190,6 +190,29 @@ const DateSelector = ({ year, month, day, onYear, onMonth, onDay }) => {
 const STORAGE_KEY = "reframe_records";
 const CHECKIN_KEY = "reframe_checkins";
 const COPING_KEY = "reframe_copings";
+const CRISIS_KEY = "stride_crisis";
+
+const loadCrisisPlan = () => {
+  try {
+    const saved = localStorage.getItem(CRISIS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 新形式かチェック
+      if (Array.isArray(parsed.safe)) return parsed;
+    }
+  } catch (e) {}
+  return {
+    safe: [],
+    caution_triggers: [],
+    caution_signs: [],
+    crisis_signs: [],
+    crisis_contacts: [],
+  };
+};
+
+const saveCrisisPlan = (plan) => {
+  try { localStorage.setItem(CRISIS_KEY, JSON.stringify(plan)); } catch (e) {}
+};
 
 const loadRecords = () => {
   try {
@@ -226,6 +249,14 @@ const loadCopings = () => {
   return [];
 };
 
+const AGREED_KEY = "stride_agreed";
+const hasAgreed = () => {
+  try { return localStorage.getItem(AGREED_KEY) === "true"; } catch (e) { return false; }
+};
+const setAgreed = () => {
+  try { localStorage.setItem(AGREED_KEY, "true"); } catch (e) {}
+};
+
 const saveCopings = (copings) => {
   try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
 };
@@ -234,6 +265,7 @@ export default function App() {
   const t = todayStr();
   const [view, setView] = useState("home");
   const [records, setRecords] = useState(loadRecords);
+  const [agreed, setAgreedState] = useState(hasAgreed);
 
   const [newSituation, setNewSituation] = useState("");
   const [newYear, setNewYear] = useState(t.year);
@@ -267,9 +299,14 @@ export default function App() {
   const [newCoping, setNewCoping] = useState({ text: "", difficulty: null, effect: null });
   const [copingDeleteId, setCopingDeleteId] = useState(null);
 
+  const [crisisPlan, setCrisisPlan] = useState(loadCrisisPlan);
+  const [crisisModal, setCrisisModal] = useState(null);
+  const [crisisTab, setCrisisTab] = useState("safe"); // { type, editId, text, text2 }
+
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
   useEffect(() => { saveCopings(copings); }, [copings]);
+  useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
 
   const sortedCopings = [...copings].sort((a, b) =>
     copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
@@ -390,11 +427,73 @@ export default function App() {
     setView("approach");
   };
 
+  const addCrisisItem = (type, text, text2 = "") => {
+    const item = { id: Date.now(), text, text2 };
+    setCrisisPlan((prev) => ({ ...prev, [type]: [...prev[type], item] }));
+  };
+
+  const updateCrisisItem = (type, id, text, text2 = "") => {
+    setCrisisPlan((prev) => ({ ...prev, [type]: prev[type].map((i) => i.id === id ? { ...i, text, text2 } : i) }));
+  };
+
+  const deleteCrisisItem = (type, id) => {
+    setCrisisPlan((prev) => ({ ...prev, [type]: prev[type].filter((i) => i.id !== id) }));
+  };
+
   const psRecord = records.find((r) => r.id === psId);
+
+  if (!agreed) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>Stride</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>はじめる前に</div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>以下をご確認のうえ、同意いただける場合はご利用ください。</div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>データの保存について</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+              入力したデータはお使いのブラウザ（端末）にのみ保存されます。サーバーへの送信や、運営者によるデータへのアクセスは一切ありません。ブラウザのデータ削除・機種変更・別ブラウザへの切り替えでデータは失われますのでご注意ください。
+            </div>
+          </div>
+
+          <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontSize: 12, color: "#818cf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>医療行為ではありません</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+              このアプリは個人が作成したセルフケア支援ツールです。医療行為・診断・治療を目的としたものではなく、精神科・心療内科などの専門的な治療の代替にはなりません。症状が悪化した場合や、緊急性を感じる場合は、必ず医療機関または支援機関にご相談ください。
+            </div>
+          </div>
+
+          <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>免責事項</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+              本アプリの利用によって生じたいかなる損害についても、開発者は責任を負いかねます。自己の判断と責任のもとでご利用ください。
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => { setAgreed(true); setAgreedState(true); }}
+          style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 16, cursor: "pointer" }}>
+          同意してはじめる
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "relative", minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 80 }}>
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .page { animation: fadeIn 0.18s ease-out; }
+      `}</style>
 
       {/* Header */}
       <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface }}>
@@ -402,7 +501,7 @@ export default function App() {
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
-              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory") { setView("home"); }
+              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis") { setView("home"); }
               else if (view === "new" || view === "detail") { setView("list"); setEditing(false); }
               else { setView("list"); setEditing(false); }
             }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}><IconArrowLeft size={20} /></button>
@@ -417,6 +516,7 @@ export default function App() {
                 {view === "checkinHistory" && "チェックイン履歴"}
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
+                {view === "crisis" && "クライシスプラン"}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbt" && "認知再構成"}
                 {view === "ps" && "問題解決技法"}
@@ -435,7 +535,7 @@ export default function App() {
 
       {/* HOME */}
       {view === "home" && (
-        <div style={{ padding: "32px 16px 24px" }}>
+        <div className="page" style={{ padding: "32px 16px 24px" }}>
           {/* ヒーローテキスト */}
           <div style={{ marginBottom: 32 }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1.3, marginBottom: 8 }}>
@@ -511,13 +611,24 @@ export default function App() {
                 </div>
               </div>
             </button>
+            <button onClick={() => setView("crisis")}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid #f8716130`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconShield size={24} color="#f87161" />
+                <div>
+                  <div style={{ fontSize: 11, color: "#f87161", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Crisis Plan</div>
+                  クライシスプラン
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>Safe / Caution / Crisis の状態を整理する</div>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       )}
 
       {/* LIST */}
       {view === "list" && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IconPlus size={18} />ストレスを記録する
           </button>
@@ -565,7 +676,7 @@ export default function App() {
 
       {/* COPING LIST */}
       {view === "coping" && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <button onClick={() => { setNewCoping({ text: "", difficulty: null, effect: null }); setView("newCoping"); }} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer", marginBottom: 16 }}>
             ＋ コーピングを追加する
           </button>
@@ -588,7 +699,7 @@ export default function App() {
             <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだコーピングがないよ<br />上のボタンから追加してみて</div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div key={copingSort} className="page" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {sortedCopings.map((c) => (
               <div key={c.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -630,7 +741,7 @@ export default function App() {
 
       {/* NEW COPING */}
       {view === "newCoping" && (
-        <div style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>どんな対処法？</div>
             <textarea rows={4} style={inp} placeholder="例）散歩に出かける、好きな音楽を聴く、深呼吸を10回する" value={newCoping.text} onChange={(e) => setNewCoping({ ...newCoping, text: e.target.value })} />
@@ -672,9 +783,214 @@ export default function App() {
         </div>
       )}
 
+      {/* CRISIS PLAN */}
+      {view === "crisis" && (
+        <div className="page" style={{ padding: "20px 16px" }}>
+
+          {/* タブ */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            {[
+              { id: "safe", label: "Safe", color: COLORS.accent },
+              { id: "caution", label: "Caution", color: "#e0a855" },
+              { id: "crisis", label: "Crisis", color: COLORS.danger },
+            ].map((tab) => (
+              <button key={tab.id} onClick={() => setCrisisTab(tab.id)}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${crisisTab === tab.id ? tab.color : COLORS.border}`, background: crisisTab === tab.id ? `${tab.color}18` : COLORS.surface, color: crisisTab === tab.id ? tab.color : COLORS.textMuted, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s" }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Safe */}
+          {crisisTab === "safe" && (
+            <div key="safe" className="page" style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.accent }} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.accent, letterSpacing: 2, textTransform: "uppercase" }}>Safe</div>
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 12 }}>安定しているときの自分の状態を書いておこう</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                {crisisPlan.safe.map((item) => (
+                  <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
+                    <button onClick={() => setCrisisModal({ type: "safe", editId: item.id, text: item.text, text2: "" })}
+                      style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                    <button onClick={() => deleteCrisisItem("safe", item.id)}
+                      style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setCrisisModal({ type: "safe", editId: null, text: "", text2: "" })}
+                style={{ width: "100%", background: "none", border: `1px dashed ${COLORS.accent}50`, borderRadius: 10, color: COLORS.accent, fontSize: 13, padding: "10px", cursor: "pointer" }}>
+                ＋ 追加する
+              </button>
+            </div>
+          )}
+
+          {/* Caution */}
+          {crisisTab === "caution" && (
+            <div key="caution" className="page" style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#e0a855" }} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#e0a855", letterSpacing: 2, textTransform: "uppercase" }}>Caution</div>
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16 }}>ストレスのトリガー・注意サイン、それぞれに対処法を書いておこう</div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>トリガー（ストレスになりうるもの）</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                  {crisisPlan.caution_triggers.map((item) => (
+                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 6 }}>{item.text}</div>
+                          {item.text2 && <div style={{ fontSize: 12, color: "#e0a855", borderTop: `1px solid ${COLORS.border}`, paddingTop: 6, marginTop: 4 }}>対処法：{item.text2}</div>}
+                        </div>
+                        <button onClick={() => setCrisisModal({ type: "caution_triggers", editId: item.id, text: item.text, text2: item.text2 })}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                        <button onClick={() => deleteCrisisItem("caution_triggers", item.id)}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setCrisisModal({ type: "caution_triggers", editId: null, text: "", text2: "" })}
+                  style={{ width: "100%", background: "none", border: `1px dashed #e0a85550`, borderRadius: 10, color: "#e0a855", fontSize: 13, padding: "10px", cursor: "pointer" }}>
+                  ＋ 追加する
+                </button>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>注意サイン（体・気持ちの変化）</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                  {crisisPlan.caution_signs.map((item) => (
+                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 6 }}>{item.text}</div>
+                          {item.text2 && <div style={{ fontSize: 12, color: "#e0a855", borderTop: `1px solid ${COLORS.border}`, paddingTop: 6, marginTop: 4 }}>対処法：{item.text2}</div>}
+                        </div>
+                        <button onClick={() => setCrisisModal({ type: "caution_signs", editId: item.id, text: item.text, text2: item.text2 })}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                        <button onClick={() => deleteCrisisItem("caution_signs", item.id)}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setCrisisModal({ type: "caution_signs", editId: null, text: "", text2: "" })}
+                  style={{ width: "100%", background: "none", border: `1px dashed #e0a85550`, borderRadius: 10, color: "#e0a855", fontSize: 13, padding: "10px", cursor: "pointer" }}>
+                  ＋ 追加する
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Crisis */}
+          {crisisTab === "crisis" && (
+            <div key="crisis" className="page" style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.danger }} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.danger, letterSpacing: 2, textTransform: "uppercase" }}>Crisis</div>
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16 }}>危機のサイン・対処法、連絡先を書いておこう</div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: COLORS.danger, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>危機のサイン</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                  {crisisPlan.crisis_signs.map((item) => (
+                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1, fontSize: 14, color: COLORS.text }}>{item.text}</div>
+                        <button onClick={() => setCrisisModal({ type: "crisis_signs", editId: item.id, text: item.text, text2: "" })}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                        <button onClick={() => deleteCrisisItem("crisis_signs", item.id)}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setCrisisModal({ type: "crisis_signs", editId: null, text: "", text2: "" })}
+                  style={{ width: "100%", background: "none", border: `1px dashed ${COLORS.danger}50`, borderRadius: 10, color: COLORS.danger, fontSize: 13, padding: "10px", cursor: "pointer" }}>
+                  ＋ 追加する
+                </button>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: COLORS.danger, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>対処法・連絡先</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                  {crisisPlan.crisis_contacts.map((item) => (
+                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
+                        <button onClick={() => setCrisisModal({ type: "crisis_contacts", editId: item.id, text: item.text, text2: "" })}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                        <button onClick={() => deleteCrisisItem("crisis_contacts", item.id)}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setCrisisModal({ type: "crisis_contacts", editId: null, text: "", text2: "" })}
+                  style={{ width: "100%", background: "none", border: `1px dashed ${COLORS.danger}50`, borderRadius: 10, color: COLORS.danger, fontSize: 13, padding: "10px", cursor: "pointer" }}>
+                  ＋ 追加する
+                </button>
+              </div>
+            </div>
+          )}
+
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+
+          {/* 入力モーダル */}
+          {crisisModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
+              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12 }}>
+                  {crisisModal.type === "safe" && "安定しているときの状態"}
+                  {crisisModal.type === "caution_triggers" && "トリガー"}
+                  {crisisModal.type === "caution_signs" && "注意サイン"}
+                  {crisisModal.type === "crisis_signs" && "危機のサイン"}
+                  {crisisModal.type === "crisis_contacts" && "対処法・連絡先"}
+                </div>
+                <textarea rows={3} style={{ ...inp, marginBottom: 10 }}
+                  placeholder={
+                    crisisModal.type === "safe" ? "例）よく眠れている、趣味を楽しめている" :
+                    crisisModal.type === "caution_triggers" ? "例）締め切りが重なる" :
+                    crisisModal.type === "caution_signs" ? "例）イライラしやすくなる" :
+                    crisisModal.type === "crisis_signs" ? "例）希死念慮が出てくる" :
+                    "例）〇〇クリニック（主治医）/ 深呼吸して落ち着く"
+                  }
+                  value={crisisModal.text}
+                  onChange={(e) => setCrisisModal({ ...crisisModal, text: e.target.value })}
+                  autoFocus
+                />
+                {crisisModal.type !== "safe" && crisisModal.type !== "crisis_signs" && crisisModal.type !== "crisis_contacts" && (
+                  <textarea rows={2} style={{ ...inp, marginBottom: 16 }}
+                    placeholder="対処法を書いておこう"
+                    value={crisisModal.text2}
+                    onChange={(e) => setCrisisModal({ ...crisisModal, text2: e.target.value })}
+                  />
+                )}
+                <div style={{ display: "flex", gap: 10, marginTop: crisisModal.type === "safe" ? 16 : 0 }}>
+                  <button onClick={() => setCrisisModal(null)}
+                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+                  <button onClick={() => {
+                    if (!crisisModal.text.trim()) return;
+                    if (crisisModal.editId) {
+                      updateCrisisItem(crisisModal.type, crisisModal.editId, crisisModal.text, crisisModal.text2);
+                    } else {
+                      addCrisisItem(crisisModal.type, crisisModal.text, crisisModal.text2);
+                    }
+                    setCrisisModal(null);
+                  }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                    {crisisModal.editId ? "更新する" : "追加する"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* CHECKIN HISTORY */}
       {view === "checkinHistory" && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           {recentCheckins.every((r) => !r.data) && (
             <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>
               まだチェックインの記録がないよ<br />毎日記録すると波が見えてくる
@@ -721,7 +1037,7 @@ export default function App() {
         </div>
       )}
       {view === "checkin" && (
-        <div style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px" }}>
           {/* 気分スコア */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
@@ -785,7 +1101,7 @@ export default function App() {
 
       {/* NEW */}
       {view === "new" && (
-        <div style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
             <DateSelector year={newYear} month={newMonth} day={newDay} onYear={setNewYear} onMonth={setNewMonth} onDay={setNewDay} />
@@ -803,7 +1119,7 @@ export default function App() {
 
       {/* DETAIL — 表示 */}
       {view === "detail" && selectedDetail && !editing && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>{formatDate(selectedDetail.date)}</div>
           <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", fontSize: 16, fontWeight: 600, lineHeight: 1.6, marginBottom: 24, border: `1px solid ${COLORS.border}` }}>{selectedDetail.situation}</div>
 
@@ -847,7 +1163,7 @@ export default function App() {
 
       {/* DETAIL — 編集 */}
       {view === "detail" && selectedDetail && editing && (
-        <div style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
             <DateSelector year={editYear} month={editMonth} day={editDay} onYear={setEditYear} onMonth={setEditMonth} onDay={setEditDay} />
@@ -887,7 +1203,7 @@ export default function App() {
 
       {/* APPROACH */}
       {view === "approach" && selectedDetail && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 24, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
             <IconPin size={14} />{selectedDetail.situation}
           </div>
@@ -916,7 +1232,7 @@ export default function App() {
 
       {/* PS */}
       {view === "ps" && psRecord && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
             {PS_STEPS.map((_, i) => (
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= psStep ? "#818cf8" : COLORS.border, transition: "background 0.3s" }} />
@@ -964,7 +1280,7 @@ export default function App() {
         </div>
       )}
       {view === "cbt" && cbtRecord && (
-        <div style={{ padding: "20px 16px" }}>
+        <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
             {CBT_STEPS.map((_, i) => (
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= cbtStep ? COLORS.accent : COLORS.border, transition: "background 0.3s" }} />
