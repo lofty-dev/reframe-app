@@ -21,7 +21,38 @@ const COLORS = {
   psAccent: "#818cf8",
 };
 
+const CBT3_STEPS = [
+  {
+    id: "situation3",
+    label: "状況",
+    question: "どんな状況だった？",
+    placeholder: "例）会議で発言しようとしたら、上司に話を遮られた",
+    hint: "いつ、どこで、何が起きたかを具体的に書いてみよう。感情や解釈は後でOK。",
+  },
+  {
+    id: "emotion3",
+    label: "感情",
+    question: "そのとき、どんな感情があった？強さは？",
+    placeholder: "例）恥ずかしさ 70%、怒り 50%",
+    hint: "感情に名前をつけて、強さを0〜100%で書いてみよう。複数あってもOK。",
+  },
+  {
+    id: "autoThought3",
+    label: "自動思考",
+    question: "そのとき頭に浮かんだ考えは？",
+    placeholder: "例）自分の意見は価値がないんだ、また同じことが起きる",
+    hint: "出来事の直後に頭に浮かんだ言葉をそのまま書いてみよう。評価しなくていい。\nまず状況と感情と思考を書き出すことで、自分のパターンが見えてくるよ。",
+  },
+];
+
 const CBT_STEPS = [
+  {
+    id: "situation7",
+    label: "状況",
+    question: "どんな状況だった？",
+    placeholder: "例）会議で発言しようとしたら、上司に話を遮られた。いつ、どこで、誰と、何が起きたかを具体的に",
+    hint: "ストレス記録に書いたことをもとに、もう少し具体的に書いてみよう。\nいつ・どこで・誰と・何が起きたか、を意識すると整理しやすいよ。",
+  },
   {
     id: "emotion",
     label: "感情",
@@ -32,9 +63,16 @@ const CBT_STEPS = [
   {
     id: "autoThought",
     label: "自動思考",
-    question: "頭に浮かんだ考えは？",
-    placeholder: "例）自分はダメな人間だ、また失敗した",
-    hint: "出来事のあとに、瞬間的に頭に浮かんだ考えや言葉を書いてみよう。\n「〜に違いない」「〜のせいだ」「〜はずだ」という形になることが多い。評価せずそのまま書いてOK。",
+    question: "頭に浮かんだ考えを書き出そう",
+    placeholder: "例）自分はダメな人間だ",
+    hint: "出来事のあとに、瞬間的に頭に浮かんだ考えを一つずつ書いてみよう。\n「〜に違いない」「〜のせいだ」という形になることが多い。複数あってもOK。",
+  },
+  {
+    id: "selectThought",
+    label: "検証する自動思考",
+    question: "根拠・反証を検証したい自動思考を一つ選ぼう",
+    placeholder: "",
+    hint: "複数の自動思考がある場合、一番気になるものや、一番強く信じているものを選ぼう。\n選んだ思考に対して、根拠と反証を丁寧に検討していくよ。",
   },
   {
     id: "evidence_for",
@@ -65,6 +103,194 @@ const CBT_STEPS = [
     hint: "最初に書いた感情と比べて、強さはどう変わった？\n大きく変わらなくても大丈夫。少しでも和らいでいれば、それが認知再構成の効果だよ。",
   },
 ];
+
+const EMOTION_LIST = [
+  { category: "ポジティブ", items: ["うれしい", "楽しい", "安心", "満足", "希望"] },
+  { category: "不安・恐れ", items: ["不安", "恐れ", "心配", "緊張", "パニック"] },
+  { category: "悲しみ", items: ["悲しい", "落ち込み", "絶望", "孤独", "寂しい"] },
+  { category: "怒り", items: ["怒り", "イライラ", "不満", "むかつき", "嫌悪"] },
+  { category: "恥・罪悪感", items: ["恥ずかしい", "罪悪感", "後悔", "自己嫌悪"] },
+  { category: "その他", items: ["驚き", "混乱", "戸惑い", "疲れ", "無力感", "虚しい"] },
+];
+
+const INTENSITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+const EmotionInput = ({ value, onChange }) => {
+  const allEmotionNames = EMOTION_LIST.flatMap(g => g.items);
+
+  const parseValue = (val) => {
+    if (!val) return { selected: [], freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
+    const items = val.split("、").map(s => {
+      const match = s.trim().match(/^(.+?)\s*(\d+)%$/);
+      if (!match) return null;
+      return { name: match[1].trim(), intensity: parseInt(match[2]) };
+    }).filter(Boolean);
+    if (items.length === 0) return { selected: [], freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
+    const isSelect = items.every(i => allEmotionNames.includes(i.name));
+    if (isSelect) return { selected: items, freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
+    return { selected: [], freeInputs: items.length > 0 ? items : [{ name: "", intensity: 50 }], mode: "free" };
+  };
+
+  const initial = parseValue(value);
+  const [mode, setMode] = useState(initial.mode);
+  const [selected, setSelected] = useState(initial.selected);
+  const [freeInputs, setFreeInputs] = useState(initial.freeInputs);
+
+  const toText = (items) => items.filter(i => i.name).map(i => `${i.name} ${i.intensity}%`).join("、");
+
+  const handleSelectEmotion = (name) => {
+    const exists = selected.find(s => s.name === name);
+    let next;
+    if (exists) {
+      next = selected.filter(s => s.name !== name);
+    } else {
+      next = [...selected, { name, intensity: 50 }];
+    }
+    setSelected(next);
+    onChange(toText(next));
+  };
+
+  const handleSelectIntensity = (name, intensity) => {
+    const next = selected.map(s => s.name === name ? { ...s, intensity } : s);
+    setSelected(next);
+    onChange(toText(next));
+  };
+
+  const handleFreeChange = (idx, field, val) => {
+    const next = freeInputs.map((f, i) => i === idx ? { ...f, [field]: val } : f);
+    setFreeInputs(next);
+    onChange(toText(next));
+  };
+
+  return (
+    <div>
+      {/* モード切り替え */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {["select", "free"].map((m) => (
+          <button key={m} onClick={() => setMode(m)}
+            style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${mode === m ? COLORS.accent : COLORS.border}`, background: mode === m ? COLORS.accentSoft : COLORS.surface, color: mode === m ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {m === "select" ? "選択式" : "自由記入"}
+          </button>
+        ))}
+      </div>
+
+      {mode === "select" && (
+        <div>
+          {EMOTION_LIST.map((group) => (
+            <div key={group.category} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, marginBottom: 8 }}>{group.category}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {group.items.map((name) => {
+                  const sel = selected.find(s => s.name === name);
+                  return (
+                    <div key={name}>
+                      <button onClick={() => handleSelectEmotion(name)}
+                        style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${sel ? COLORS.accent : COLORS.border}`, background: sel ? COLORS.accentSoft : COLORS.surface, color: sel ? COLORS.accent : COLORS.textMuted, fontSize: 13, fontWeight: sel ? 700 : 400, cursor: "pointer" }}>
+                        {name}
+                      </button>
+                      {sel && (
+                        <select value={sel.intensity} onChange={(e) => handleSelectIntensity(name, parseInt(e.target.value))}
+                          style={{ ...sel, marginLeft: 6, padding: "4px 6px", borderRadius: 6, fontSize: 12, width: 70, background: COLORS.surface, color: COLORS.accent, border: `1px solid ${COLORS.accent}` }}>
+                          {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {selected.length > 0 && (
+            <div style={{ marginTop: 12, padding: "10px 14px", background: COLORS.accentSoft, borderRadius: 8, fontSize: 13, color: COLORS.accent }}>
+              {toText(selected)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "free" && (
+        <div>
+          {freeInputs.map((f, idx) => (
+            <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="例）不安"
+                value={f.name}
+                onChange={(e) => handleFreeChange(idx, "name", e.target.value)}
+                style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
+              />
+              <select value={f.intensity} onChange={(e) => handleFreeChange(idx, "intensity", parseInt(e.target.value))}
+                style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 8px", outline: "none", fontFamily: "inherit", width: 80 }}>
+                {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
+              </select>
+              {freeInputs.length > 1 && (
+                <button onClick={() => { const next = freeInputs.filter((_, i) => i !== idx); setFreeInputs(next); onChange(toText(next)); }}
+                  style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: 0 }}>×</button>
+              )}
+            </div>
+          ))}
+          <button onClick={() => setFreeInputs([...freeInputs, { name: "", intensity: 50 }])}
+            style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
+            ＋ 感情を追加する
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AutoThoughtInput = ({ value, onChange }) => {
+  const parseThoughts = (val) => {
+    if (!val) return [{ id: Date.now(), text: "" }];
+    const items = val.split("\n").filter(s => s.trim());
+    return items.length > 0 ? items.map((t, i) => ({ id: i, text: t })) : [{ id: 0, text: "" }];
+  };
+
+  const [thoughts, setThoughts] = useState(parseThoughts(value));
+
+  const toText = (items) => items.filter(i => i.text.trim()).map(i => i.text.trim()).join("\n");
+
+  const handleChange = (id, text) => {
+    const next = thoughts.map(t => t.id === id ? { ...t, text } : t);
+    setThoughts(next);
+    onChange(toText(next));
+  };
+
+  const addThought = () => {
+    setThoughts([...thoughts, { id: Date.now(), text: "" }]);
+  };
+
+  const removeThought = (id) => {
+    const next = thoughts.filter(t => t.id !== id);
+    setThoughts(next);
+    onChange(toText(next));
+  };
+
+  return (
+    <div>
+      {thoughts.map((t, idx) => (
+        <div key={t.id} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
+          <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
+          <textarea
+            rows={2}
+            style={{ ...inp, flex: 1, resize: "none" }}
+            placeholder="例）自分はダメな人間だ"
+            value={t.text}
+            onChange={(e) => handleChange(t.id, e.target.value)}
+          />
+          {thoughts.length > 1 && (
+            <button onClick={() => removeThought(t.id)}
+              style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: "8px 0", opacity: 0.5 }}>×</button>
+          )}
+        </div>
+      ))}
+      <button onClick={addThought}
+        style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
+        ＋ 自動思考を追加する
+      </button>
+    </div>
+  );
+};
 
 const PS_STEPS = [
   {
@@ -250,12 +476,53 @@ const loadCopings = () => {
 };
 
 const AGREED_KEY = "stride_agreed";
+const ONBOARDED_KEY = "stride_onboarded";
+
 const hasAgreed = () => {
   try { return localStorage.getItem(AGREED_KEY) === "true"; } catch (e) { return false; }
 };
 const setAgreed = () => {
   try { localStorage.setItem(AGREED_KEY, "true"); } catch (e) {}
 };
+const hasOnboarded = () => {
+  try { return localStorage.getItem(ONBOARDED_KEY) === "true"; } catch (e) { return false; }
+};
+const setOnboarded = () => {
+  try { localStorage.setItem(ONBOARDED_KEY, "true"); } catch (e) {}
+};
+
+const ONBOARDING_SLIDES = [
+  {
+    icon: "🌱",
+    title: "Strideへようこそ",
+    desc: "毎日の記録と振り返りを通じて、ストレスを引きずらない構造を作るアプリです。再発防止のための日常習慣を、一歩ずつ積み重ねていきましょう。",
+    color: COLORS.accent,
+  },
+  {
+    icon: "📊",
+    title: "毎日のチェックイン",
+    desc: "気分・体調・睡眠を毎日記録することで、自分のパターンが見えてきます。過去2週間の履歴も確認できます。",
+    color: COLORS.accent,
+  },
+  {
+    icon: "🧠",
+    title: "ストレスに向き合う",
+    desc: "ストレスを記録したら、認知再構成か問題解決技法を選んでワークを進めます。途中で止めても大丈夫、続きからいつでも再開できます。",
+    color: "#818cf8",
+  },
+  {
+    icon: "📋",
+    title: "コーピングリスト",
+    desc: "自分だけの対処法を難易度・効果とともに登録しておきましょう。つらいときにリストを見返すことで、次の一手が見つかります。",
+    color: "#818cf8",
+  },
+  {
+    icon: "🛡️",
+    title: "クライシスプラン",
+    desc: "Safe / Caution / Crisis の3段階で、自分の状態とサインを整理しておきます。詳しくはホームのガイドからいつでも確認できます。",
+    color: COLORS.danger,
+  },
+];
 
 const saveCopings = (copings) => {
   try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
@@ -266,6 +533,8 @@ export default function App() {
   const [view, setView] = useState("home");
   const [records, setRecords] = useState(loadRecords);
   const [agreed, setAgreedState] = useState(hasAgreed);
+  const [onboarded, setOnboardedState] = useState(hasOnboarded);
+  const [onboardSlide, setOnboardSlide] = useState(0);
 
   const [newSituation, setNewSituation] = useState("");
   const [newYear, setNewYear] = useState(t.year);
@@ -276,6 +545,8 @@ export default function App() {
   const [cbtStep, setCbtStep] = useState(0);
   const [cbtDraft, setCbtDraft] = useState({});
   const [showHint, setShowHint] = useState(false);
+  const [cbtMode, setCbtMode] = useState("7");
+  const [selectedThought, setSelectedThought] = useState(""); // "3" or "7"
 
   const [psId, setPsId] = useState(null);
   const [psStep, setPsStep] = useState(0);
@@ -301,7 +572,10 @@ export default function App() {
 
   const [crisisPlan, setCrisisPlan] = useState(loadCrisisPlan);
   const [crisisModal, setCrisisModal] = useState(null);
-  const [crisisTab, setCrisisTab] = useState("safe"); // { type, editId, text, text2 }
+  const [crisisTab, setCrisisTab] = useState("safe");
+
+  const [copingSelectId, setCopingSelectId] = useState(null);
+  const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
@@ -390,6 +664,20 @@ export default function App() {
     setCbtDraft(rec.cbt || {});
     setCbtStep(0);
     setShowHint(false);
+    setView("cbtSelect");
+  };
+
+  const startCBT3 = () => {
+    setCbtMode("3");
+    setCbtStep(0);
+    setShowHint(false);
+    setView("cbt");
+  };
+
+  const startCBT7 = () => {
+    setCbtMode("7");
+    setCbtStep(0);
+    setShowHint(false);
     setView("cbt");
   };
 
@@ -425,6 +713,17 @@ export default function App() {
   const startApproach = (id) => {
     setDetailId(id);
     setView("approach");
+  };
+
+  const startCopingSelect = (id) => {
+    setCopingSelectId(id);
+    setView("copingSelect");
+  };
+
+  const confirmCoping = (coping) => {
+    setRecords(records.map((r) => r.id === copingSelectId ? { ...r, completed: true, coping } : r));
+    setCopingConfirm(null);
+    setView("list");
   };
 
   const addCrisisItem = (type, text, text2 = "") => {
@@ -478,8 +777,49 @@ export default function App() {
         <button
           onClick={() => { setAgreed(true); setAgreedState(true); }}
           style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 16, cursor: "pointer" }}>
-          同意してはじめる
+          同意して次へ →
         </button>
+      </div>
+    );
+  }
+
+  if (agreed && !onboarded) {
+    const slide = ONBOARDING_SLIDES[onboardSlide];
+    const isLast = onboardSlide === ONBOARDING_SLIDES.length - 1;
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "60px 24px 40px", display: "flex", flexDirection: "column" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .slide { animation: fadeIn 0.2s ease-out; }`}</style>
+
+        {/* プログレスドット */}
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 48 }}>
+          {ONBOARDING_SLIDES.map((_, i) => (
+            <div key={i} style={{ width: i === onboardSlide ? 20 : 6, height: 6, borderRadius: 3, background: i === onboardSlide ? slide.color : COLORS.border, transition: "all 0.3s" }} />
+          ))}
+        </div>
+
+        {/* スライドコンテンツ */}
+        <div key={onboardSlide} className="slide" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 28 }}>{slide.icon}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 16, lineHeight: 1.4 }}>{slide.title}</div>
+          <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.9, maxWidth: 340 }}>{slide.desc}</div>
+        </div>
+
+        {/* ボタン */}
+        <div style={{ display: "flex", gap: 10, marginTop: 40 }}>
+          {onboardSlide > 0 && (
+            <button onClick={() => setOnboardSlide(onboardSlide - 1)}
+              style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: 14, cursor: "pointer" }}>
+              ← 戻る
+            </button>
+          )}
+          <button onClick={() => {
+            if (isLast) { setOnboarded(true); setOnboardedState(true); }
+            else setOnboardSlide(onboardSlide + 1);
+          }} style={{ flex: 2, background: slide.color, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+            {isLast ? "はじめる 🎉" : "次へ →"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -501,8 +841,11 @@ export default function App() {
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
-              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis") { setView("home"); }
+              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support") { setView("home"); }
               else if (view === "new" || view === "detail") { setView("list"); setEditing(false); }
+              else if (view === "copingSelect") { setView("approach"); }
+              else if (view === "cbtSelect") { setView("approach"); }
+              else if (view === "cbt") { setView("cbtSelect"); }
               else { setView("list"); setEditing(false); }
             }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}><IconArrowLeft size={20} /></button>
           )}
@@ -517,7 +860,11 @@ export default function App() {
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
                 {view === "crisis" && "クライシスプラン"}
+                {view === "guide" && "使い方ガイド"}
+                {view === "support" && "サポート・フィードバック"}
                 {view === "approach" && "アプローチを選ぶ"}
+                {view === "cbtSelect" && "コラム法を選ぶ"}
+                {view === "copingSelect" && "コーピングで対処する"}
                 {view === "cbt" && "認知再構成"}
                 {view === "ps" && "問題解決技法"}
                 {view === "detail" && !editing && "記録の詳細"}
@@ -622,7 +969,63 @@ export default function App() {
                 </div>
               </div>
             </button>
+            <button onClick={() => setView("guide")}
+              style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: "14px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 18 }}>📖</span>
+                <div style={{ fontSize: 13 }}>使い方ガイド</div>
+              </div>
+            </button>
+            <button onClick={() => setView("support")}
+              style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: "14px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 18 }}>💬</span>
+                <div style={{ fontSize: 13 }}>サポート・フィードバック</div>
+              </div>
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* SUPPORT */}
+      {view === "support" && (
+        <div className="page" style={{ padding: "24px 16px" }}>
+          <div style={{ background: COLORS.surface, borderRadius: 14, padding: "20px 18px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>フィードバック・お問い合わせ</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8, marginBottom: 16 }}>
+              バグの報告・機能のご要望・使い方のご質問など、お気軽にお送りください。いただいたフィードバックは今後の改善に活かします。
+            </div>
+            <button
+              onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSf-Ee2A58_L8EFZdhwPiTbGg_F6STH3-FymVPiGKeme-YVcaw/viewform", "_blank")}
+              style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+              フォームを開く →
+            </button>
+          </div>
+
+          <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.8 }}>
+              <div style={{ fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>開発者について</div>
+              Strideは、精神科デイケアで学んだ内容をもとに個人が開発したセルフケア支援アプリです。医療行為・診断・治療を目的としたものではありません。
+            </div>
+          </div>
+
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+        </div>
+      )}
+
+      {/* GUIDE */}
+      {view === "guide" && (
+        <div className="page" style={{ padding: "20px 16px" }}>
+          {ONBOARDING_SLIDES.map((slide, i) => (
+            <div key={i} style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${slide.color}30` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 24 }}>{slide.icon}</span>
+                <div style={{ fontSize: 14, fontWeight: 700, color: slide.color }}>{slide.title}</div>
+              </div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>{slide.desc}</div>
+            </div>
+          ))}
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
 
@@ -1123,14 +1526,34 @@ export default function App() {
           <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>{formatDate(selectedDetail.date)}</div>
           <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", fontSize: 16, fontWeight: 600, lineHeight: 1.6, marginBottom: 24, border: `1px solid ${COLORS.border}` }}>{selectedDetail.situation}</div>
 
+          {/* コーピング記録 */}
+          {selectedDetail.coping && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, color: "#e0a855", fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>コーピングの記録</div>
+              <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid #e0a85530`, color: COLORS.text }}>
+                {selectedDetail.coping}
+              </div>
+            </div>
+          )}
+
           {/* CBT記録 */}
           {selectedDetail.cbt && Object.keys(selectedDetail.cbt).length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>認知再構成の記録</div>
-              {CBT_STEPS.map((step) => selectedDetail.cbt[step.id] ? (
+              {[...CBT3_STEPS, ...CBT_STEPS].map((step) => selectedDetail.cbt[step.id] ? (
                 <div key={step.id} style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{step.label}</div>
-                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>{selectedDetail.cbt[step.id]}</div>
+                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>
+                    {step.id === "autoThought" || step.id === "autoThought3"
+                      ? selectedDetail.cbt[step.id].split("\n").filter(s => s.trim()).map((t, i) => (
+                          <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < selectedDetail.cbt[step.id].split("\n").filter(s => s.trim()).length - 1 ? 8 : 0 }}>
+                            <span style={{ color: COLORS.textMuted, minWidth: 16 }}>{i + 1}</span>
+                            <span>{t}</span>
+                          </div>
+                        ))
+                      : selectedDetail.cbt[step.id]
+                    }
+                  </div>
                 </div>
               ) : null)}
             </div>
@@ -1225,10 +1648,98 @@ export default function App() {
               </div>
               <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, paddingLeft: 34 }}>状況そのものを変えたいとき。問題を整理して、具体的な行動を考える</div>
             </button>
+
+            <button onClick={() => startCopingSelect(selectedDetail.id)} style={{ background: COLORS.surface, border: `1px solid #e0a85540`, borderRadius: 14, padding: "16px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                <IconListCheck size={22} color="#e0a855" />
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>コーピング</div>
+              </div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, paddingLeft: 34 }}>今すぐ気持ちを楽にしたいとき。自分のコーピングリストから選んで対処する</div>
+            </button>
           </div>
           <BottomNav onBack={() => setView("detail")} onHome={() => setView("home")} />
         </div>
       )}
+
+      {/* CBT SELECT */}
+      {view === "cbtSelect" && (() => {
+        const rec = records.find((r) => r.id === cbtId);
+        return rec ? (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 24, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <IconPin size={14} />{rec.situation}
+            </div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>どのコラム法を使いますか？</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <button onClick={startCBT3} style={{ background: COLORS.surface, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, padding: "16px", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>3コラム法</div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>状況・感情・自動思考を整理したいとき。まず出来事を書き出して、自分のパターンに気づく</div>
+              </button>
+              <button onClick={startCBT7} style={{ background: COLORS.surface, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, padding: "16px", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>7コラム法</div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>しっかり認知を再構成したいとき。根拠・反証・バランス思考まで丁寧に整理する</div>
+              </button>
+            </div>
+            <BottomNav onBack={() => setView("approach")} onHome={() => setView("home")} />
+          </div>
+        ) : null;
+      })()}
+
+      {/* COPING SELECT */}
+      {view === "copingSelect" && (() => {
+        const rec = records.find((r) => r.id === copingSelectId);
+        return rec ? (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 24, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <IconPin size={14} />{rec.situation}
+            </div>
+
+            {/* 自分のコーピングリスト */}
+            <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>自分のコーピングリスト</div>
+            {copings.length === 0 ? (
+              <div style={{ background: COLORS.surface, borderRadius: 12, padding: "20px 16px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 2 }}>
+                まだコーピングが登録されていません<br />
+                <span style={{ fontSize: 12 }}>ホーム → コーピングリストから追加できます</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {sortedCopings.map((c) => (
+                  <button key={c.id} onClick={() => setCopingConfirm(c)}
+                    style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 16px", border: `1px solid ${COLORS.border}`, textAlign: "left", cursor: "pointer", width: "100%" }}>
+                    <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.6, marginBottom: 6 }}>{c.text}</div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: COLORS.textMuted }}>
+                      <span>難易度 <span style={{ color: COLORS.text, fontWeight: 700 }}>{c.difficulty}</span>/5</span>
+                      <span>効果 <span style={{ color: COLORS.text, fontWeight: 700 }}>{c.effect}</span>/5</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <BottomNav onBack={() => setView("approach")} onHome={() => setView("home")} />
+
+            {/* 確認ダイアログ */}
+            {copingConfirm && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}>
+                <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+                  <div style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 8 }}>このコーピングを選びますか？</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 24, lineHeight: 1.5 }}>{copingConfirm.text}</div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setCopingConfirm(null)}
+                      style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                      キャンセル
+                    </button>
+                    <button onClick={() => confirmCoping(copingConfirm.text)}
+                      style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                      これにする
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {/* PS */}
       {view === "ps" && psRecord && (
@@ -1279,36 +1790,78 @@ export default function App() {
           </button>
         </div>
       )}
-      {view === "cbt" && cbtRecord && (
+      {view === "cbt" && cbtRecord && (() => {
+        const steps = cbtMode === "3" ? CBT3_STEPS : CBT_STEPS;
+        const currentStep = steps[cbtStep];
+        return (
         <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
-            {CBT_STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= cbtStep ? COLORS.accent : COLORS.border, transition: "background 0.3s" }} />
             ))}
           </div>
           <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
-            Step {cbtStep + 1} / {CBT_STEPS.length} — {CBT_STEPS[cbtStep].label}
+            Step {cbtStep + 1} / {steps.length} — {currentStep.label}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{CBT_STEPS[cbtStep].question}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{currentStep.question}</div>
           <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
             📌 {cbtRecord.situation}
           </div>
-          <textarea
-            rows={5}
-            style={inp}
-            placeholder={CBT_STEPS[cbtStep].placeholder}
-            value={cbtDraft[CBT_STEPS[cbtStep].id] || ""}
-            onChange={(e) => setCbtDraft({ ...cbtDraft, [CBT_STEPS[cbtStep].id]: e.target.value })}
-          />
+          {currentStep.id === "reEmotion" && cbtDraft["emotion"] && (
+            <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.textMuted, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4 }}>最初の感情</div>
+              <div style={{ color: COLORS.text }}>{cbtDraft["emotion"]}</div>
+            </div>
+          )}
+          {currentStep.id === "autoThought" || currentStep.id === "autoThought3" ? (
+            <AutoThoughtInput
+              value={cbtDraft[currentStep.id] || ""}
+              onChange={(val) => setCbtDraft({ ...cbtDraft, [currentStep.id]: val })}
+            />
+          ) : currentStep.id === "selectThought" ? (
+            <div>
+              {(cbtDraft["autoThought"] || "").split("\n").filter(s => s.trim()).map((thought, idx) => (
+                <button key={idx} onClick={() => { setSelectedThought(thought); setCbtDraft({ ...cbtDraft, selectThought: thought }); }}
+                  style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 10, border: `2px solid ${selectedThought === thought ? COLORS.accent : COLORS.border}`, background: selectedThought === thought ? COLORS.accentSoft : COLORS.surface, color: selectedThought === thought ? COLORS.accent : COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
+                  {thought}
+                </button>
+              ))}
+              {!(cbtDraft["autoThought"] || "").trim() && (
+                <div style={{ color: COLORS.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>自動思考が入力されていません</div>
+              )}
+            </div>
+          ) : (currentStep.id !== "emotion" && currentStep.id !== "reEmotion" && currentStep.id !== "emotion3") ? (
+            <>
+              {(currentStep.id === "evidence_for" || currentStep.id === "evidence_against" || currentStep.id === "balanced") && (selectedThought || cbtDraft["selectThought"]) && (
+                <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accent, marginBottom: 12, border: `1px solid ${COLORS.accent}30` }}>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>検証する自動思考</div>
+                  {selectedThought || cbtDraft["selectThought"]}
+                </div>
+              )}
+              <textarea
+                rows={5}
+                style={inp}
+                placeholder={currentStep.placeholder}
+                value={cbtDraft[currentStep.id] || ""}
+                onChange={(e) => setCbtDraft({ ...cbtDraft, [currentStep.id]: e.target.value })}
+              />
+            </>
+          ) : (
+            <EmotionInput
+              value={cbtDraft[currentStep.id] || ""}
+              onChange={(val) => setCbtDraft({ ...cbtDraft, [currentStep.id]: val })}
+            />
+          )}
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             {cbtStep > 0 && (
               <button onClick={() => { setCbtStep(cbtStep - 1); setShowHint(false); }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
             )}
             <button
-              onClick={() => { if (cbtStep < CBT_STEPS.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
-              style={{ flex: 2, background: cbtStep === CBT_STEPS.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
+              onClick={() => { if (cbtStep < steps.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
+              disabled={currentStep.id === "selectThought" && !cbtDraft["selectThought"]}
+              style={{ flex: 2, background: currentStep.id === "selectThought" && !cbtDraft["selectThought"] ? COLORS.border : cbtStep === steps.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: currentStep.id === "selectThought" && !cbtDraft["selectThought"] ? "default" : "pointer" }}
             >
-              {cbtStep === CBT_STEPS.length - 1 ? "✓ 完了する" : "次へ →"}
+              {cbtStep === steps.length - 1 ? "✓ 完了する" : "次へ →"}
             </button>
           </div>
 
@@ -1320,7 +1873,7 @@ export default function App() {
             </button>
             {showHint && (
               <div style={{ marginTop: 10, background: COLORS.hint, border: `1px solid ${COLORS.hintBorder}`, borderRadius: 10, padding: "14px 16px", fontSize: 13, color: COLORS.hintText, lineHeight: 1.8, whiteSpace: "pre-line" }}>
-                {CBT_STEPS[cbtStep].hint}
+                {currentStep.hint}
               </div>
             )}
           </div>
@@ -1328,7 +1881,8 @@ export default function App() {
             今日はここまでにする
           </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* 削除確認ダイアログ */}
       {deleteTargetId && (
