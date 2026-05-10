@@ -417,6 +417,18 @@ const STORAGE_KEY = "reframe_records";
 const CHECKIN_KEY = "reframe_checkins";
 const COPING_KEY = "reframe_copings";
 const CRISIS_KEY = "stride_crisis";
+const ACHIEVEMENTS_KEY = "stride_achievements";
+
+const loadAchievements = () => {
+  try {
+    const saved = localStorage.getItem(ACHIEVEMENTS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+};
+const saveAchievements = (data) => {
+  try { localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(data)); } catch (e) {}
+};
 
 const loadCrisisPlan = () => {
   try {
@@ -578,12 +590,27 @@ export default function App() {
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
   const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
 
+  const [achievements, setAchievements] = useState(loadAchievements);
+  const [achievementText, setAchievementText] = useState("");
+  const [achievementTab, setAchievementTab] = useState("log");
+  const [achievementDeleteId, setAchievementDeleteId] = useState(null);
+  const [selectedAchievementDate, setSelectedAchievementDate] = useState(null);
+
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const [mfMinutes, setMfMinutes] = useState(5);
+  const [mfRunning, setMfRunning] = useState(false);
+  const [mfRemaining, setMfRemaining] = useState(null);
+  const [mfTimerRef, setMfTimerRef] = useState(null);
+  const [mfInfoOpen, setMfInfoOpen] = useState(false);
+
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
   useEffect(() => { saveCopings(copings); }, [copings]);
+  useEffect(() => { saveAchievements(achievements); }, [achievements]);
   useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
 
   const sortedCopings = [...copings].sort((a, b) =>
@@ -636,6 +663,7 @@ export default function App() {
     setNewSituation("");
     const t2 = todayStr();
     setNewYear(t2.year); setNewMonth(t2.month); setNewDay(t2.day);
+    setVisibleCount(10);
     setView("list");
   };
 
@@ -858,7 +886,10 @@ export default function App() {
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
-              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support") { setView("home"); }
+              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support" || view === "achievement" || view === "mindfulness") { 
+                if (view === "mindfulness" && mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
+                setView("home"); 
+              }
               else if (view === "new" || view === "detail") { setView("list"); setEditing(false); }
               else if (view === "copingSelect") { setView("approach"); }
               else if (view === "cbtSelect") { setView("approach"); }
@@ -879,6 +910,8 @@ export default function App() {
                 {view === "crisis" && "クライシスプラン"}
                 {view === "guide" && "使い方ガイド"}
                 {view === "support" && "サポート・フィードバック"}
+                {view === "achievement" && "できたことログ"}
+                {view === "mindfulness" && "マインドフルネス"}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
                 {view === "copingSelect" && "コーピングで対処する"}
@@ -953,6 +986,28 @@ export default function App() {
                 </div>
               </div>
             </button>
+            <button onClick={() => setView("achievement")}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>⭐</span>
+                <div>
+                  <div style={{ fontSize: 11, color: "#e0a855", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Achievement</div>
+                  できたことログ
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>小さな前進を積み重ねる</div>
+                </div>
+              </div>
+            </button>
+            <button onClick={() => { setMfRunning(false); setMfRemaining(null); setMfMinutes(5); setView("mindfulness"); }}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>🧘</span>
+                <div>
+                  <div style={{ fontSize: 11, color: "#818cf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Mindfulness</div>
+                  マインドフルネス
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>タイマーで静かな時間を作る</div>
+                </div>
+              </div>
+            </button>
             <button onClick={() => setView("list")}
               style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}20, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1001,6 +1056,377 @@ export default function App() {
               </div>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ACHIEVEMENT */}
+      {view === "achievement" && (() => {
+        const todayStr2 = toDateStr(t.year, t.month, t.day);
+        const todayAchievements = achievements.filter(a => a.date === todayStr2);
+
+        // 連続記録日数を計算
+        let streak = 0;
+        const d = new Date();
+        while (true) {
+          const y = String(d.getFullYear());
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          const dateStr = toDateStr(y, m, day);
+          if (achievements.some(a => a.date === dateStr)) {
+            streak++;
+            d.setDate(d.getDate() - 1);
+          } else break;
+        }
+
+        // カレンダー（今月）
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth2 = new Date(year, month + 1, 0).getDate();
+        const recordedDates = new Set(achievements.map(a => a.date));
+
+        const saveAchievement = () => {
+          if (!achievementText.trim()) return;
+          setAchievements([{ id: Date.now(), date: todayStr2, text: achievementText.trim() }, ...achievements]);
+          setAchievementText("");
+        };
+
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            {/* 連続記録 */}
+            <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 16, border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ fontSize: 40, fontWeight: 700, color: COLORS.accent, lineHeight: 1 }}>{streak}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>日連続記録中</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>毎日続けることが力になる</div>
+              </div>
+            </div>
+
+            {/* タブ */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              {[{ v: "log", label: "ログ" }, { v: "calendar", label: "カレンダー" }].map(({ v, label }) => (
+                <button key={v} onClick={() => setAchievementTab(v)}
+                  style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1.5px solid ${achievementTab === v ? COLORS.accent : COLORS.border}`, background: achievementTab === v ? COLORS.accentSoft : COLORS.surface, color: achievementTab === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ログタブ */}
+            {achievementTab === "log" && (
+              <div key="log" className="page">
+                {/* 入力 */}
+                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 8 }}>今日できたことを記録する</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input type="text" placeholder="例）30分散歩できた"
+                      value={achievementText}
+                      onChange={(e) => setAchievementText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveAchievement()}
+                      style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
+                    />
+                    <button onClick={saveAchievement} disabled={!achievementText.trim()}
+                      style={{ background: achievementText.trim() ? COLORS.accent : COLORS.border, border: "none", borderRadius: 8, color: "#0f1117", fontSize: 13, fontWeight: 700, padding: "10px 16px", cursor: achievementText.trim() ? "pointer" : "default" }}>
+                      追加
+                    </button>
+                  </div>
+                </div>
+
+                {/* 今日の記録のみ */}
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 10 }}>今日の記録</div>
+                {todayAchievements.length === 0 ? (
+                  <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "32px 0", lineHeight: 2 }}>
+                    まだ今日の記録がないよ<br />小さなことでも書いてみよう
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {todayAchievements.map((a) => (
+                      <div key={a.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}40`, display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ fontSize: 16 }}>⭐</div>
+                        <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{a.text}</div>
+                        <button onClick={() => setAchievementDeleteId(a.id)}
+                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.4 }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginTop: 16 }}>
+                  過去の記録はカレンダーから確認できます
+                </div>
+              </div>
+            )}
+
+            {/* カレンダータブ */}
+            {achievementTab === "calendar" && (
+              <div key="calendar" className="page">
+                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px", border: `1px solid ${COLORS.border}`, marginBottom: 16 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, textAlign: "center", marginBottom: 16 }}>
+                    {year}年{month + 1}月
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
+                    {["日", "月", "火", "水", "木", "金", "土"].map((d, i) => (
+                      <div key={d} style={{ textAlign: "center", fontSize: 11, color: i === 0 ? COLORS.danger : i === 6 ? COLORS.accent : COLORS.textMuted, fontWeight: 700 }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {Array.from({ length: firstDay === 0 ? 0 : firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
+                    {Array.from({ length: daysInMonth2 }, (_, i) => {
+                      const day = i + 1;
+                      const dateStr = toDateStr(String(year), String(month + 1).padStart(2, "0"), String(day).padStart(2, "0"));
+                      const hasRecord = recordedDates.has(dateStr);
+                      const isToday = dateStr === todayStr2;
+                      const isSelected = dateStr === selectedAchievementDate;
+                      return (
+                        <div key={day} onClick={() => hasRecord && setSelectedAchievementDate(isSelected ? null : dateStr)}
+                          style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: isSelected ? COLORS.accent : hasRecord ? COLORS.accentSoft : isToday ? COLORS.accentSoft : "none", border: isSelected ? "none" : isToday ? `1px solid ${COLORS.accent}` : "none", fontSize: 12, fontWeight: hasRecord || isToday ? 700 : 400, color: isSelected ? "#0f1117" : hasRecord ? COLORS.accent : isToday ? COLORS.accent : COLORS.textMuted, cursor: hasRecord ? "pointer" : "default" }}>
+                          {hasRecord ? "⭐" : day}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 選択した日の記録 */}
+                {selectedAchievementDate ? (
+                  <div>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 10 }}>
+                      {(() => { const [, m, d] = selectedAchievementDate.split("-"); return `${parseInt(m)}月${parseInt(d)}日の記録`; })()}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {achievements.filter(a => a.date === selectedAchievementDate).map((a) => (
+                        <div key={a.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ fontSize: 16 }}>⭐</div>
+                          <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{a.text}</div>
+                          <button onClick={() => setAchievementDeleteId(a.id)}
+                            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.4 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginTop: 4 }}>
+                    ⭐のある日をタップすると記録を見られます
+                  </div>
+                )}
+              </div>
+            )}
+
+            <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+
+            {achievementDeleteId && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}>
+                <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>この記録を削除しますか？</div>
+                  <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+                    {achievements.find(a => a.id === achievementDeleteId)?.text}
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setAchievementDeleteId(null)}
+                      style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+                    <button onClick={() => { setAchievements(achievements.filter(a => a.id !== achievementDeleteId)); setAchievementDeleteId(null); }}
+                      style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>削除する</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* MINDFULNESS */}
+      {view === "mindfulness" && (
+        <div className="page" style={{ padding: "32px 16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+
+          {!mfRunning && mfRemaining === null && (
+            <>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🧘</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>マインドフルネス</div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 1.8, marginBottom: 24, maxWidth: 280 }}>
+                時間を設定してスタートしましょう。タイマーが終わると音が鳴ります。<br />
+                <span style={{ fontSize: 12, color: "#818cf8" }}>🎵 瞑想中はBGM（雨音風）が流れます</span>
+              </div>
+
+              {/* マインドフルネスとは？アコーディオン */}
+              <div style={{ width: "100%", marginBottom: 32 }}>
+                <button onClick={() => setMfInfoOpen(!mfInfoOpen)}
+                  style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: mfInfoOpen ? "12px 12px 0 0" : 12, color: COLORS.textMuted, fontSize: 13, padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>マインドフルネスとは？</span>
+                  <span style={{ fontSize: 15 }}>{mfInfoOpen ? "▾" : "▸"}</span>
+                </button>
+                {mfInfoOpen && (
+                  <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "16px", fontSize: 13, color: COLORS.textMuted, lineHeight: 1.9 }}>
+                    <div style={{ marginBottom: 12 }}>
+                      マインドフルネスとは、「今この瞬間」に意識を向ける練習です。過去への後悔や未来への不安から離れ、今の呼吸や体の感覚に集中することで、心を落ち着かせます。
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      精神科領域でも認知行動療法と組み合わせて活用されており、ストレス軽減・感情調整・再発防止に効果があるとされています。
+                    </div>
+                    <div style={{ fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>やり方</div>
+                    <div style={{ lineHeight: 2 }}>
+                      ① 楽な姿勢で座る<br />
+                      ② 目を閉じるか、視線を落とす<br />
+                      ③ 呼吸に意識を向ける（吸う・吐く）<br />
+                      ④ 考えが浮かんでも、そっと呼吸に戻す<br />
+                      ⑤ タイマーが鳴るまで続ける
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: 40, width: "100%" }}>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 16 }}>時間を選ぶ</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+                  {[1, 3, 5, 7, 10].map(m => (
+                    <button key={m} onClick={() => setMfMinutes(m)}
+                      style={{ width: 64, height: 64, borderRadius: "50%", border: `2px solid ${mfMinutes === m ? "#818cf8" : COLORS.border}`, background: mfMinutes === m ? "#818cf820" : COLORS.surface, color: mfMinutes === m ? "#818cf8" : COLORS.textMuted, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      {m}分
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={() => {
+                const total = mfMinutes * 60;
+                setMfRemaining(total);
+                setMfRunning(true);
+
+                // ホワイトノイズ（雨音風）を開始
+                try {
+                  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                  const bufferSize = ctx.sampleRate * 2;
+                  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                  const data = buffer.getChannelData(0);
+                  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                  const source = ctx.createBufferSource();
+                  source.buffer = buffer;
+                  source.loop = true;
+                  const filter = ctx.createBiquadFilter();
+                  filter.type = "lowpass";
+                  filter.frequency.value = 800;
+                  const gainNode = ctx.createGain();
+                  gainNode.gain.value = 0.15;
+                  source.connect(filter);
+                  filter.connect(gainNode);
+                  gainNode.connect(ctx.destination);
+                  source.start();
+                  window._mfAudioCtx = ctx;
+                  window._mfSource = source;
+                  window._mfGain = gainNode;
+                } catch(e) {}
+
+                const ref = setInterval(() => {
+                  setMfRemaining(prev => {
+                    if (prev <= 1) {
+                      clearInterval(ref);
+                      setMfRunning(false);
+                      // ホワイトノイズを止める
+                      try {
+                        if (window._mfGain) {
+                          window._mfGain.gain.exponentialRampToValueAtTime(0.001, window._mfAudioCtx.currentTime + 1);
+                        }
+                        setTimeout(() => {
+                          try { window._mfSource?.stop(); window._mfAudioCtx?.close(); } catch(e) {}
+                        }, 1200);
+                      } catch(e) {}
+                      // ベル音を鳴らす
+                      try {
+                        setTimeout(() => {
+                          const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+                          const playBell = (delay) => {
+                            const osc = ctx2.createOscillator();
+                            const gain = ctx2.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx2.destination);
+                            osc.frequency.setValueAtTime(528, ctx2.currentTime + delay);
+                            osc.frequency.exponentialRampToValueAtTime(440, ctx2.currentTime + delay + 2);
+                            gain.gain.setValueAtTime(0.4, ctx2.currentTime + delay);
+                            gain.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + delay + 3);
+                            osc.start(ctx2.currentTime + delay);
+                            osc.stop(ctx2.currentTime + delay + 3);
+                          };
+                          playBell(0);
+                          playBell(3.5);
+                        }, 1000);
+                      } catch(e) {}
+                      return 0;
+                    }
+                    return prev - 1;
+                  });
+                }, 1000);
+                setMfTimerRef(ref);
+              }} style={{ width: 160, height: 160, borderRadius: "50%", border: `3px solid #818cf8`, background: "#818cf815", color: "#818cf8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                <span style={{ fontSize: 32 }}>▶</span>
+                スタート
+              </button>
+            </>
+          )}
+
+          {(mfRunning || (mfRemaining !== null && mfRemaining > 0)) && (
+            <>
+              <div style={{ fontSize: 13, color: "#818cf8", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 24 }}>瞑想中</div>
+
+              {/* 円形プログレス */}
+              <div style={{ position: "relative", width: 220, height: 220, marginBottom: 40 }}>
+                <svg viewBox="0 0 220 220" style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}>
+                  <circle cx="110" cy="110" r="100" fill="none" stroke={COLORS.border} strokeWidth="6" />
+                  <circle cx="110" cy="110" r="100" fill="none" stroke="#818cf8" strokeWidth="6"
+                    strokeDasharray={`${2 * Math.PI * 100}`}
+                    strokeDashoffset={`${2 * Math.PI * 100 * (1 - mfRemaining / (mfMinutes * 60))}`}
+                    strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s linear" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ fontSize: 48, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
+                    {String(Math.floor(mfRemaining / 60)).padStart(2, "0")}:{String(mfRemaining % 60).padStart(2, "0")}
+                  </div>
+                  <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 8 }}>残り時間</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 14, color: COLORS.textMuted, textAlign: "center", lineHeight: 2, marginBottom: 40 }}>
+                呼吸に意識を向けましょう<br />
+                <span style={{ fontSize: 12 }}>吸って… 吐いて…</span>
+              </div>
+
+              <button onClick={() => {
+                if (mfTimerRef) clearInterval(mfTimerRef);
+                try {
+                  if (window._mfGain) window._mfGain.gain.exponentialRampToValueAtTime(0.001, window._mfAudioCtx.currentTime + 0.5);
+                  setTimeout(() => { try { window._mfSource?.stop(); window._mfAudioCtx?.close(); } catch(e) {} }, 600);
+                } catch(e) {}
+                setMfRunning(false);
+                setMfRemaining(null);
+              }} style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px 32px", cursor: "pointer" }}>
+                終了する
+              </button>
+            </>
+          )}
+
+          {!mfRunning && mfRemaining === 0 && (
+            <>
+              <div style={{ fontSize: 64, marginBottom: 20 }}>🔔</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>お疲れ様でした</div>
+              <div style={{ fontSize: 14, color: COLORS.textMuted, textAlign: "center", lineHeight: 1.8, marginBottom: 40 }}>
+                {mfMinutes}分間の瞑想が完了しました
+              </div>
+              <div style={{ display: "flex", gap: 10, width: "100%" }}>
+                <button onClick={() => setView("home")}
+                  style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+                  ホームへ
+                </button>
+                <button onClick={() => { setMfRemaining(null); setMfRunning(false); }}
+                  style={{ flex: 1, background: "#818cf8", border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+                  もう一度
+                </button>
+              </div>
+            </>
+          )}
+
+          {(!mfRunning && mfRemaining === null) && (
+            <div style={{ marginTop: 40, width: "100%" }}>
+              <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+            </div>
+          )}
         </div>
       )}
 
@@ -1056,7 +1482,7 @@ export default function App() {
             <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだ記録がないよ<br />上のボタンから追加してみて</div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {records.map((rec) => (
+            {records.slice(0, visibleCount).map((rec) => (
               <div key={rec.id} style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", border: `1px solid ${COLORS.border}`, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <button
@@ -1090,6 +1516,12 @@ export default function App() {
               </div>
             ))}
           </div>
+          {records.length > visibleCount && (
+            <button onClick={() => setVisibleCount(visibleCount + 10)}
+              style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 10 }}>
+              もっと見る（残り{records.length - visibleCount}件）
+            </button>
+          )}
           <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
