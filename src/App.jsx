@@ -820,7 +820,7 @@ export default function App() {
     const slide = ONBOARDING_SLIDES[onboardSlide];
     const isLast = onboardSlide === ONBOARDING_SLIDES.length - 1;
     return (
-      <div style={{ height: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+      <div style={{ height: "100dvh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .slide { animation: fadeIn 0.2s ease-out; }`}</style>
 
