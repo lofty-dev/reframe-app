@@ -832,7 +832,7 @@ export default function App() {
         </div>
 
         {/* スライドコンテンツ */}
-        <div key={onboardSlide} className="slide" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        <div key={onboardSlide} className="slide" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{slide.icon}</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.4 }}>{slide.title}</div>
           <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.8, maxWidth: 320 }}>{slide.desc}</div>
