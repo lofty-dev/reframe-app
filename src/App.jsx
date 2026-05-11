@@ -787,7 +787,8 @@ export default function App() {
           <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
             <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>データの保存について</div>
             <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
-              入力したデータはお使いのブラウザ（端末）にのみ保存されます。サーバーへの送信や、運営者によるデータへのアクセスは一切ありません。ブラウザのデータ削除・機種変更・別ブラウザへの切り替えでデータは失われますのでご注意ください。
+              入力したデータはお使いのブラウザ（端末）にのみ保存されます。サーバーへの送信や、運営者によるデータへのアクセスは一切ありません。ブラウザのデータ削除・機種変更・別ブラウザへの切り替えでデータは失われますのでご注意ください。<br /><br />
+              またiPhoneでホーム画面に追加（PWA）した場合、ブラウザ版とホーム画面版でデータは別々に保存されます。どちらか一方で使い続けることをおすすめします。
             </div>
           </div>
 
