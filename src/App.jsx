@@ -820,7 +820,7 @@ export default function App() {
     const slide = ONBOARDING_SLIDES[onboardSlide];
     const isLast = onboardSlide === ONBOARDING_SLIDES.length - 1;
     return (
-      <div style={{ height: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "24px 24px 24px", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "24px 24px 100px", boxSizing: "border-box" }}>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .slide { animation: fadeIn 0.2s ease-out; }`}</style>
 
@@ -832,14 +832,14 @@ export default function App() {
         </div>
 
         {/* スライドコンテンツ */}
-        <div key={onboardSlide} className="slide" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 40 }}>
+        <div key={onboardSlide} className="slide" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", paddingTop: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{slide.icon}</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.4 }}>{slide.title}</div>
           <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.8, maxWidth: 320 }}>{slide.desc}</div>
         </div>
 
-        {/* ボタン */}
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        {/* ボタン（固定） */}
+        <div style={{ position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 48px)", maxWidth: 432, display: "flex", gap: 10 }}>
           {onboardSlide > 0 && (
             <button onClick={() => setOnboardSlide(onboardSlide - 1)}
               style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: 14, cursor: "pointer" }}>
