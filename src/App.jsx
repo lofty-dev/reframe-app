@@ -839,7 +839,7 @@ export default function App() {
         </div>
 
         {/* ボタン（固定） */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px 40px", background: COLORS.bg, display: "flex", gap: 10 }}>
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "16px 24px 40px", background: COLORS.bg, display: "flex", gap: 10, boxSizing: "border-box" }}>
           {onboardSlide > 0 && (
             <button onClick={() => setOnboardSlide(onboardSlide - 1)}
               style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: 14, cursor: "pointer" }}>
