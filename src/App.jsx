@@ -536,6 +536,53 @@ const loadCopings = () => {
   return [];
 };
 
+const PWA_KEY = "stride_pwa_prompted";
+const hasPwaPrompted = () => {
+  try { return localStorage.getItem(PWA_KEY) === "true"; } catch (e) { return false; }
+};
+const setPwaPrompted = () => {
+  try { localStorage.setItem(PWA_KEY, "true"); } catch (e) {}
+};
+
+const ALL_STORAGE_KEYS = [
+  "reframe_records", "reframe_checkins", "reframe_copings",
+  "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
+  "stride_settings", "stride_medical", "stride_memo",
+];
+
+const exportData = () => {
+  const data = {};
+  ALL_STORAGE_KEYS.forEach((key) => {
+    try { data[key] = JSON.parse(localStorage.getItem(key)); } catch (e) { data[key] = null; }
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stride_backup_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const importData = (file, onDone) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      ALL_STORAGE_KEYS.forEach((key) => {
+        if (data[key] !== undefined && data[key] !== null) {
+          localStorage.setItem(key, JSON.stringify(data[key]));
+        }
+      });
+      onDone("ok");
+    } catch (err) {
+      onDone("error");
+    }
+  };
+  reader.onerror = () => onDone("error");
+  reader.readAsText(file);
+};
+
 const AGREED_KEY = "stride_agreed";
 const ONBOARDED_KEY = "stride_onboarded";
 
@@ -672,6 +719,12 @@ export default function App() {
 
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
+
+  const [pwaPrompted, setPwaPromptedState] = useState(hasPwaPrompted);
+  const [importResult, setImportResult] = useState(null);
+  const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
@@ -885,6 +938,76 @@ export default function App() {
     );
   }
 
+  if (agreed && !pwaPrompted && !isPwa) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px", boxSizing: "border-box" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 24 }}>Stride</div>
+        <div style={{ fontSize: 48, marginBottom: 16, textAlign: "center" }}>📱</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 12, textAlign: "center" }}>
+          ホーム画面に追加して<br />使ってみよう！
+        </div>
+        <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8, textAlign: "center", marginBottom: 32 }}>
+          ホーム画面に追加すると、アプリのように起動できます。データも端末に保存されます。
+        </div>
+
+        <div style={{ background: COLORS.surface, borderRadius: 16, padding: "20px 18px", border: `1px solid ${COLORS.border}`, marginBottom: 24 }}>
+          {isIos && (
+            <>
+              <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>iPhoneの場合</div>
+              {[
+                { step: "1", icon: "⬆️", text: "Safari下部の「共有」ボタンをタップ" },
+                { step: "2", icon: "➕", text: "「ホーム画面に追加」を選択" },
+                { step: "3", icon: "✅", text: "「追加」をタップして完了" },
+              ].map(({ step, icon, text }) => (
+                <div key={step} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, color: COLORS.accent, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step}</div>
+                  <div style={{ fontSize: 22, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{text}</div>
+                </div>
+              ))}
+            </>
+          )}
+          {isAndroid && (
+            <>
+              <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>Androidの場合</div>
+              {[
+                { step: "1", icon: "⋮", text: "ブラウザ右上のメニュー（⋮）をタップ" },
+                { step: "2", icon: "➕", text: "「ホーム画面に追加」を選択" },
+                { step: "3", icon: "✅", text: "「追加」をタップして完了" },
+              ].map(({ step, icon, text }) => (
+                <div key={step} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, color: COLORS.accent, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step}</div>
+                  <div style={{ fontSize: 22, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{text}</div>
+                </div>
+              ))}
+            </>
+          )}
+          {!isIos && !isAndroid && (
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>💻</div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+                スマートフォンのブラウザで開くと<br />ホーム画面に追加できます。
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => { setPwaPrompted(); setPwaPromptedState(true); }}
+          style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 16, cursor: "pointer", marginBottom: 12 }}>
+          ホーム画面に追加した！→
+        </button>
+        <button
+          onClick={() => { setPwaPrompted(); setPwaPromptedState(true); }}
+          style={{ width: "100%", background: "none", border: "none", color: COLORS.textMuted, fontSize: 13, padding: "10px", cursor: "pointer" }}>
+          あとで追加する
+        </button>
+      </div>
+    );
+  }
+
   if (agreed && !onboarded) {
     const slide = ONBOARDING_SLIDES[onboardSlide];
     const isLast = onboardSlide === ONBOARDING_SLIDES.length - 1;
@@ -918,7 +1041,7 @@ export default function App() {
           <button onClick={() => {
             if (isLast) { setOnboarded(true); setOnboardedState(true); }
             else setOnboardSlide(onboardSlide + 1);
-          }} style={{ flex: 1, background: slide.color, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+          }} style={{ flex: 2, background: slide.color, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
             {isLast ? "はじめる 🎉" : "次へ →"}
           </button>
         </div>
@@ -1015,6 +1138,20 @@ export default function App() {
       {/* HOME */}
       {view === "home" && (
         <div className="page" style={{ padding: "32px 16px 24px" }}>
+          {/* PWAバナー */}
+          {!isPwa && (
+            <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", marginBottom: 20, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                📱 ホーム画面に追加できるよ
+              </div>
+              <button
+                onClick={() => { setPwaPromptedState(false); }}
+                style={{ flexShrink: 0, background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, borderRadius: 8, color: COLORS.accent, fontSize: 12, fontWeight: 700, padding: "7px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                追加方法を見る
+              </button>
+            </div>
+          )}
+
           {/* ヒーローテキスト */}
           <div style={{ marginBottom: 32 }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1.3, marginBottom: 8 }}>
@@ -1058,7 +1195,7 @@ export default function App() {
           {/* メニュー */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {settings.checkinHistory && <button onClick={() => setView("checkinHistory")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}20, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconChartLine size={24} color={COLORS.accent} />
                 <div>
@@ -1069,7 +1206,7 @@ export default function App() {
               </div>
             </button>}
             {settings.achievement && <button onClick={() => setView("achievement")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, #e0a85520, #e0a85508)`, border: `1px solid #e0a85540`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>⭐</span>
                 <div>
@@ -1080,7 +1217,7 @@ export default function App() {
               </div>
             </button>}
             {settings.mindfulness && <button onClick={() => { setMfRunning(false); setMfRemaining(null); setMfMinutes(5); setView("mindfulness"); }}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, #818cf820, #818cf808)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>🧘</span>
                 <div>
@@ -1102,7 +1239,7 @@ export default function App() {
               </div>
             </button>}
             {settings.coping && <button onClick={() => setView("coping")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, #818cf820, #818cf808)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconListCheck size={24} color="#818cf8" />
                 <div>
@@ -1113,7 +1250,7 @@ export default function App() {
               </div>
             </button>}
             {settings.crisis && <button onClick={() => setView("crisis")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid #f8716130`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, #f8716120, #f8716108)`, border: `1px solid #f8716140`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconShield size={24} color="#f87161" />
                 <div>
@@ -1124,22 +1261,22 @@ export default function App() {
               </div>
             </button>}
             {settings.medical && <button onClick={() => { setMedicalView("list"); setView("medical"); }}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}20, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>🏥</span>
                 <div>
-                  <div style={{ fontSize: 11, color: "#38bdf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
                   診察・カウンセリング記録
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
                 </div>
               </div>
             </button>}
             {settings.memo && <button onClick={() => { setMemoView("list"); setView("memo"); }}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              style={{ width: "100%", background: `linear-gradient(135deg, #6b728020, #6b728008)`, border: `1px solid #6b728040`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>📝</span>
                 <div>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Memo</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Memo</div>
                   メモ
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>日付＋タイトル＋本文を自由に記録</div>
                 </div>
@@ -1793,6 +1930,57 @@ export default function App() {
               </div>
             ))}
           </div>
+
+          {/* データ管理 */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>データ管理</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>データをバックアップする</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
+                  全データをJSONファイルとしてダウンロードします。機種変更やブラウザ変更の前にご利用ください。
+                </div>
+                <button
+                  onClick={exportData}
+                  style={{ width: "100%", background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, borderRadius: 10, color: COLORS.accent, fontSize: 14, fontWeight: 700, padding: "12px", cursor: "pointer" }}>
+                  バックアップファイルをダウンロード
+                </button>
+              </div>
+
+              <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>データを復元する</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
+                  バックアップしたJSONファイルを選択して復元します。現在のデータは上書きされます。
+                </div>
+                <label style={{ display: "block", width: "100%", background: COLORS.bg, border: `1px dashed ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: "12px", cursor: "pointer", textAlign: "center", boxSizing: "border-box" }}>
+                  JSONファイルを選択
+                  <input type="file" accept=".json" style={{ display: "none" }} onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setImportResult(null);
+                    importData(file, (result) => {
+                      setImportResult(result);
+                      if (result === "ok") {
+                        setTimeout(() => window.location.reload(), 1500);
+                      }
+                    });
+                    e.target.value = "";
+                  }} />
+                </label>
+                {importResult === "ok" && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: COLORS.accentSoft, borderRadius: 8, fontSize: 13, color: COLORS.accent, fontWeight: 700 }}>
+                    復元しました。ページを再読み込みします…
+                  </div>
+                )}
+                {importResult === "error" && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: "#f8716120", borderRadius: 8, fontSize: 13, color: COLORS.danger, fontWeight: 700 }}>
+                    ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
