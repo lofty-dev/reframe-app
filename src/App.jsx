@@ -446,7 +446,6 @@ const CHECKIN_KEY = "reframe_checkins";
 const COPING_KEY = "reframe_copings";
 const CRISIS_KEY = "stride_crisis";
 const ACHIEVEMENTS_KEY = "stride_achievements";
-const MEDICAL_KEY = "stride_medical";
 const MEMO_KEY = "stride_memo";
 
 const TELL_PEOPLE_KEY = "stride_tell_people";
@@ -476,18 +475,6 @@ const loadMemo = () => {
 const saveMemo = (data) => {
   try { localStorage.setItem(MEMO_KEY, JSON.stringify(data)); } catch (e) {}
 };
-
-const loadMedical = () => {
-  try {
-    const saved = localStorage.getItem(MEDICAL_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-const saveMedical = (data) => {
-  try { localStorage.setItem(MEDICAL_KEY, JSON.stringify(data)); } catch (e) {}
-};
-
 
 const loadAchievements = () => {
   try {
@@ -568,7 +555,7 @@ const setPwaPrompted = () => {
 const ALL_STORAGE_KEYS = [
   "reframe_records", "reframe_checkins", "reframe_copings",
   "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
-  "stride_medical", "stride_memo", "stride_tell_people", "stride_tell_memos",
+  "stride_memo", "stride_tell_people", "stride_tell_memos",
 ];
 
 const exportData = () => {
@@ -737,13 +724,7 @@ export default function App() {
   const [achievementDeleteId, setAchievementDeleteId] = useState(null);
   const [selectedAchievementDate, setSelectedAchievementDate] = useState(null);
 
-  const [medicalRecords, setMedicalRecords] = useState(loadMedical);
-  const [medicalFilter, setMedicalFilter] = useState("all");
-  const [medicalView, setMedicalView] = useState("list"); // "list" | "new" | "detail"
-  const [medicalDraft, setMedicalDraft] = useState({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" });
-  const [medicalDetailId, setMedicalDetailId] = useState(null);
-  const [medicalEditing, setMedicalEditing] = useState(false);
-  const [medicalEditDraft, setMedicalEditDraft] = useState({});
+  const [medicalLogPersonId, setMedicalLogPersonId] = useState(null);
 
   const [memos, setMemos] = useState(loadMemo);
   const [memoView, setMemoView] = useState("list");
@@ -787,7 +768,6 @@ export default function App() {
   useEffect(() => { saveCopings(copings); }, [copings]);
   useEffect(() => { saveAchievements(achievements); }, [achievements]);
   useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
-  useEffect(() => { saveMedical(medicalRecords); }, [medicalRecords]);
   useEffect(() => { saveMemo(memos); }, [memos]);
   useEffect(() => { saveTellPeople(tellPeople); }, [tellPeople]);
   useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
@@ -1179,10 +1159,7 @@ export default function App() {
               else if (view === "settings" || view === "guide" || view === "support") { goHome(); }
               else if (view === "list") { setView("records"); setActiveTab("records"); }
               else if (view === "achievement") { setView("records"); setActiveTab("records"); }
-              else if (view === "medical") {
-                if (medicalView !== "list") { setMedicalView("list"); setMedicalEditing(false); return; }
-                setView("records"); setActiveTab("records");
-              }
+              else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "memo") {
                 if (memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 setView("records"); setActiveTab("records");
@@ -1224,7 +1201,7 @@ export default function App() {
                 {view === "achievement" && "できたことログ"}
                 {view === "mindfulness" && "マインドフルネス"}
                 {view === "settings" && "設定"}
-                {view === "medical" && (medicalView === "list" ? "診察・カウンセリング記録" : medicalView === "new" ? "新しく記録する" : medicalEditing ? "編集" : "記録の詳細")}
+                {view === "medicalLog" && "診察等の記録"}
                 {view === "memo" && (memoView === "list" ? "メモ" : memoView === "new" ? "新しいメモ" : memoEditing ? "編集" : "メモの詳細")}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
@@ -1466,14 +1443,14 @@ export default function App() {
                 </div>
               </div>
             </button>
-            <button onClick={() => { setMedicalView("list"); setView("medical"); setActiveTab("records"); }}
+            <button onClick={() => setView("medicalLog")}
               style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>🏥</span>
                 <div>
-                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
-                  診察・カウンセリング記録
-                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical Log</div>
+                  診察等の記録
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>伝えたメモを人物ごとに振り返る</div>
                 </div>
               </div>
             </button>
@@ -2098,137 +2075,62 @@ export default function App() {
         </div>
       )}
 
-      {/* MEDICAL */}
-      {view === "medical" && (() => {
-        const filteredRecords = medicalRecords.filter(r => medicalFilter === "all" || r.type === medicalFilter);
-        const detailRecord = medicalRecords.find(r => r.id === medicalDetailId);
+      {/* MEDICAL LOG */}
+      {view === "medicalLog" && (() => {
+        const completedMemos = tellMemos.filter(m => m.completed);
+        const activePeople = tellPeople.filter(p => completedMemos.some(m => m.personIds.includes(p.id)));
+        const currentPersonId = medicalLogPersonId && activePeople.some(p => p.id === medicalLogPersonId)
+          ? medicalLogPersonId
+          : activePeople[0]?.id ?? null;
+        const personMemos = currentPersonId
+          ? [...completedMemos.filter(m => m.personIds.includes(currentPersonId))].sort((a, b) => b.date.localeCompare(a.date))
+          : [];
 
-        if (medicalView === "new") return (
-          <div className="page" style={{ padding: "20px 16px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
-                <DateSelector year={medicalDraft.date.split("-")[0]} month={medicalDraft.date.split("-")[1]} day={medicalDraft.date.split("-")[2]}
-                  onYear={y => setMedicalDraft({...medicalDraft, date: toDateStr(y, medicalDraft.date.split("-")[1], medicalDraft.date.split("-")[2])})}
-                  onMonth={m => setMedicalDraft({...medicalDraft, date: toDateStr(medicalDraft.date.split("-")[0], m, medicalDraft.date.split("-")[2])})}
-                  onDay={d => setMedicalDraft({...medicalDraft, date: toDateStr(medicalDraft.date.split("-")[0], medicalDraft.date.split("-")[1], d)})} />
+        return (
+          <div className="page" style={{ padding: "16px 0 100px" }}>
+            {activePeople.length === 0 ? (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "48px 24px", lineHeight: 2 }}>
+                完了済みのメモがまだありません
+                <div style={{ fontSize: 12, marginTop: 8 }}>伝えたいことメモを完了にすると、ここに記録が表示されます</div>
               </div>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>種別</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {["診察", "カウンセリング", "その他"].map(t => (
-                    <button key={t} onClick={() => setMedicalDraft({...medicalDraft, type: t})}
-                      style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1.5px solid ${medicalDraft.type === t ? COLORS.accent : COLORS.border}`, background: medicalDraft.type === t ? COLORS.accentSoft : COLORS.surface, color: medicalDraft.type === t ? COLORS.accent : COLORS.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                      {t}
+            ) : (
+              <>
+                {/* 人物タブ */}
+                <div style={{ display: "flex", gap: 8, padding: "0 16px 16px", overflowX: "auto", borderBottom: `1px solid ${COLORS.border}` }}>
+                  {activePeople.map(p => (
+                    <button key={p.id} onClick={() => setMedicalLogPersonId(p.id)}
+                      style={{ flexShrink: 0, padding: "8px 18px", borderRadius: 20, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        background: currentPersonId === p.id ? COLORS.accent : COLORS.surface,
+                        color: currentPersonId === p.id ? "#0f1117" : COLORS.textMuted }}>
+                      {p.name}
                     </button>
                   ))}
                 </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>場所・担当者名 <span style={{ fontSize: 11 }}>任意</span></div>
-                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）〇〇クリニック・田中先生" value={medicalDraft.place} onChange={e => setMedicalDraft({...medicalDraft, place: e.target.value})} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>話したこと</div>
-                <textarea rows={4} style={inp} placeholder="例）最近眠れていないこと、仕事のストレスについて" value={medicalDraft.talked} onChange={e => setMedicalDraft({...medicalDraft, talked: e.target.value})} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>言われたこと・気づき</div>
-                <textarea rows={4} style={inp} placeholder="例）睡眠の質を上げるために就寝前のスマホを控えるよう言われた" value={medicalDraft.told} onChange={e => setMedicalDraft({...medicalDraft, told: e.target.value})} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>次回予約日 <span style={{ fontSize: 11 }}>任意</span></div>
-                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）2週間後・6月15日" value={medicalDraft.nextDate} onChange={e => setMedicalDraft({...medicalDraft, nextDate: e.target.value})} />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button onClick={() => setMedicalView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
-              <button onClick={() => {
-                if (!medicalDraft.talked.trim() && !medicalDraft.told.trim()) return;
-                setMedicalRecords([{ id: Date.now(), ...medicalDraft }, ...medicalRecords]);
-                setMedicalDraft({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" });
-                setMedicalView("list");
-              }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>記録する</button>
-            </div>
-          </div>
-        );
 
-        if (medicalView === "detail" && detailRecord) return (
-          <div className="page" style={{ padding: "20px 16px" }}>
-            {!medicalEditing ? (
-              <>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{formatDate(detailRecord.date)}</div>
-                <div style={{ display: "inline-block", background: COLORS.accentSoft, borderRadius: 6, padding: "3px 10px", fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 16 }}>{detailRecord.type}</div>
-                {detailRecord.place && <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, color: COLORS.textMuted, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>{detailRecord.place}</div>}
-                {[{ label: "話したこと", value: detailRecord.talked }, { label: "言われたこと・気づき", value: detailRecord.told }, { label: "次回予約日", value: detailRecord.nextDate }].map(({ label, value }) => value ? (
-                  <div key={label} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{label}</div>
-                    <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}`, color: COLORS.text }}>{value}</div>
-                  </div>
-                ) : null)}
-                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <button onClick={() => { setMedicalEditDraft({...detailRecord}); setMedicalEditing(true); }}
-                    style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>編集</button>
-                  <button onClick={() => { setMedicalRecords(medicalRecords.filter(r => r.id !== detailRecord.id)); setMedicalView("list"); }}
-                    style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>削除</button>
-                </div>
-                <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
-              </>
-            ) : (
-              <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[{ label: "話したこと", key: "talked", rows: 4 }, { label: "言われたこと・気づき", key: "told", rows: 4 }, { label: "次回予約日", key: "nextDate", rows: 1 }].map(({ label, key, rows }) => (
-                    <div key={key}>
-                      <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>{label}</div>
-                      <textarea rows={rows} style={inp} value={medicalEditDraft[key] || ""} onChange={e => setMedicalEditDraft({...medicalEditDraft, [key]: e.target.value})} />
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-                  <button onClick={() => setMedicalEditing(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
-                  <button onClick={() => { setMedicalRecords(medicalRecords.map(r => r.id === detailRecord.id ? {...r, ...medicalEditDraft} : r)); setMedicalEditing(false); }}
-                    style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
+                {/* メモ一覧 */}
+                <div style={{ padding: "16px 16px 0" }}>
+                  {personMemos.length === 0 ? (
+                    <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 32 }}>記録がありません</div>
+                  ) : (
+                    personMemos.map(m => {
+                      const check = m.checks[currentPersonId] || { checked: false, reply: "" };
+                      return (
+                        <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 14 }}>
+                          <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 10 }}>{m.date}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>伝えたこと</div>
+                          <div style={{ fontSize: 14, color: COLORS.text, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7, marginBottom: 14, paddingLeft: 2 }}>{m.content}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>言われたこと</div>
+                          <textarea value={check.reply || ""} onChange={e => updateTellReply(m.id, currentPersonId, e.target.value)}
+                            placeholder="言われたことや返答をメモできます"
+                            rows={3}
+                            style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 12px", color: COLORS.text, fontSize: 13, boxSizing: "border-box", resize: "vertical", lineHeight: 1.6 }} />
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </>
             )}
-          </div>
-        );
-
-        return (
-          <div className="page" style={{ padding: "20px 16px" }}>
-            <button onClick={() => { setMedicalDraft({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" }); setMedicalView("new"); }}
-              style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <IconPlus size={16} />新しく記録する
-            </button>
-
-            {/* フィルター */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              {["all", "診察", "カウンセリング", "その他"].map(f => (
-                <button key={f} onClick={() => setMedicalFilter(f)}
-                  style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1.5px solid ${medicalFilter === f ? COLORS.accent : COLORS.border}`, background: medicalFilter === f ? COLORS.accentSoft : COLORS.surface, color: medicalFilter === f ? COLORS.accent : COLORS.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                  {f === "all" ? "すべて" : f}
-                </button>
-              ))}
-            </div>
-
-            {filteredRecords.length === 0 ? (
-              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "40px 0", lineHeight: 2 }}>まだ記録がないよ</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {filteredRecords.map(r => (
-                  <div key={r.id} onClick={() => { setMedicalDetailId(r.id); setMedicalEditing(false); setMedicalView("detail"); }}
-                    style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ fontSize: 12, color: COLORS.textMuted }}>{formatDate(r.date)}</div>
-                      <div style={{ background: COLORS.accentSoft, borderRadius: 4, padding: "2px 8px", fontSize: 11, color: COLORS.accent, fontWeight: 700 }}>{r.type}</div>
-                      {r.place && <div style={{ fontSize: 12, color: COLORS.textMuted }}>{r.place}</div>}
-                    </div>
-                    {r.talked && <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.talked}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-            <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
