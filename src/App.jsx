@@ -1465,7 +1465,15 @@ export default function App() {
         <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => setView("bridgePerson")}
+            <button onClick={() => {
+              if (tellPeople.length === 1) {
+                setBridgePersonId(tellPeople[0].id);
+                setBridgeMemoInput("");
+                setView("bridge");
+              } else {
+                setView("bridgePerson");
+              }
+            }}
               style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}22, ${COLORS.accent}08)`, border: `1.5px solid ${COLORS.accent}70`, borderRadius: 16, color: COLORS.text, padding: "20px 18px", cursor: "pointer", textAlign: "left", boxShadow: `0 2px 16px ${COLORS.accent}14` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
