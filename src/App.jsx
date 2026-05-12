@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings } from "@tabler/icons-react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const COLORS = {
   bg: "#0f1117",
@@ -654,6 +657,29 @@ const saveCopings = (copings) => {
   try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
 };
 
+function SortablePersonItem({ person, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
+  return (
+    <div ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1,
+        background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12,
+        padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span {...attributes} {...listeners}
+          style={{ cursor: "grab", color: COLORS.textMuted, fontSize: 18, touchAction: "none", userSelect: "none", lineHeight: 1 }}>⠿</span>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{person.name}</span>
+          <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{person.type}</span>
+        </div>
+      </div>
+      <button onClick={() => onDelete(person.id)}
+        style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
+        ×
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const t = todayStr();
   const [view, setView] = useState("home");
@@ -734,6 +760,10 @@ export default function App() {
   const [tellNewPersonIds, setTellNewPersonIds] = useState([]);
   const [tellNewPersonName, setTellNewPersonName] = useState("");
   const [tellNewPersonType, setTellNewPersonType] = useState("その他");
+  const [tellMemoDeleteId, setTellMemoDeleteId] = useState(null);
+  const [tellPersonDeleteId, setTellPersonDeleteId] = useState(null);
+
+  const dndSensors = useSensors(useSensor(PointerSensor));
 
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -1560,18 +1590,22 @@ export default function App() {
               {tellPeople.length === 0 ? (
                 <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 16 }}>登録された人物がいません</div>
               ) : (
-                tellPeople.map(p => (
-                  <div key={p.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</span>
-                      <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{p.type}</span>
-                    </div>
-                    <button onClick={() => setTellPeople(prev => prev.filter(x => x.id !== p.id))}
-                      style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
-                      ×
-                    </button>
-                  </div>
-                ))
+                <DndContext sensors={dndSensors} collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => {
+                    if (active.id !== over?.id) {
+                      setTellPeople(prev => {
+                        const oldIndex = prev.findIndex(p => p.id === active.id);
+                        const newIndex = prev.findIndex(p => p.id === over.id);
+                        return arrayMove(prev, oldIndex, newIndex);
+                      });
+                    }
+                  }}>
+                  <SortableContext items={tellPeople.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                    {tellPeople.map(p => (
+                      <SortablePersonItem key={p.id} person={p} onDelete={(id) => setTellPersonDeleteId(id)} />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           )}
@@ -1652,11 +1686,17 @@ export default function App() {
                       <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</span>
                       <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{p.type}</span>
                     </div>
-                    <button onClick={() => toggleTellCheck(memo.id, p.id)}
-                      style={{ padding: "7px 14px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                        background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
-                      {check.checked ? "✓ 伝えた" : "伝えた"}
-                    </button>
+                    {memo.completed ? (
+                      <span style={{ padding: "7px 14px", borderRadius: 9, background: "#818cf820", color: "#818cf8", fontSize: 13, fontWeight: 600 }}>
+                        ✓ 伝えた
+                      </span>
+                    ) : (
+                      <button onClick={() => toggleTellCheck(memo.id, p.id)}
+                        style={{ padding: "7px 14px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                          background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
+                        {check.checked ? "✓ 伝えた" : "伝えた"}
+                      </button>
+                    )}
                   </div>
                   {check.checked && (
                     <div>
@@ -1679,7 +1719,7 @@ export default function App() {
             {memo.completed && (
               <div style={{ textAlign: "center", color: COLORS.success, fontSize: 13, fontWeight: 600, marginTop: 8, marginBottom: 10 }}>✓ 完了済み</div>
             )}
-            <button onClick={() => { setTellMemos(prev => prev.filter(m => m.id !== memo.id)); setView("tellMemos"); }}
+            <button onClick={() => setTellMemoDeleteId(memo.id)}
               style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
               このメモを削除
             </button>
@@ -3522,6 +3562,50 @@ export default function App() {
         setActiveTab(id);
         setView(TAB_VIEWS[id]);
       }} />
+
+      {/* メモ削除確認ダイアログ */}
+      {tellMemoDeleteId && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>このメモを削除しますか？</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24, maxHeight: 80, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+              {tellMemos.find(m => m.id === tellMemoDeleteId)?.content}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setTellMemoDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                キャンセル
+              </button>
+              <button onClick={() => { setTellMemos(prev => prev.filter(m => m.id !== tellMemoDeleteId)); setTellMemoDeleteId(null); setView("tellMemos"); }}
+                style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 人物削除確認ダイアログ */}
+      {tellPersonDeleteId && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
+              {tellPeople.find(p => p.id === tellPersonDeleteId)?.name}を削除しますか？
+            </div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              この人物に紐づいたメモの記録も影響を受けます。
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setTellPersonDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                キャンセル
+              </button>
+              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellPersonDeleteId(null); }}
+                style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 削除確認ダイアログ */}
       {deleteTargetId && (
