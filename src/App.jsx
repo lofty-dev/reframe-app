@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -404,23 +404,30 @@ const TAB_VIEWS = {
   medical: "medicalTab",
 };
 
-const BottomTabBar = ({ activeTab, onTabChange }) => (
-  <div className="no-print" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, display: "flex", zIndex: 200, paddingBottom: "env(safe-area-inset-bottom)" }}>
-    {[
-      { id: "home", icon: "🏠", label: "ホーム" },
-      { id: "records", icon: "📝", label: "記録" },
-      { id: "tools", icon: "🧠", label: "ツール" },
-      { id: "medical", icon: "🩺", label: "診察" },
-    ].map(({ id, icon, label }) => (
-      <button key={id} onClick={() => onTabChange(id)}
-        style={{ flex: 1, background: "none", border: "none", padding: "10px 0 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-        <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: activeTab === id ? COLORS.accent : COLORS.textMuted, letterSpacing: 0.3 }}>{label}</span>
-        {activeTab === id && <div style={{ width: 20, height: 2, borderRadius: 1, background: COLORS.accent }} />}
-      </button>
-    ))}
-  </div>
-);
+const BottomTabBar = ({ activeTab, onTabChange }) => {
+  const tabs = [
+    { id: "home", Icon: IconHome, label: "ホーム" },
+    { id: "records", Icon: IconPencil, label: "記録" },
+    { id: "tools", Icon: IconBrain, label: "ツール" },
+    { id: "medical", Icon: IconStethoscope, label: "診察" },
+  ];
+  return (
+    <div className="no-print" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, display: "flex", zIndex: 200, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {tabs.map(({ id, Icon, label }) => {
+        const active = activeTab === id;
+        const color = active ? COLORS.accent : COLORS.textMuted;
+        return (
+          <button key={id} onClick={() => onTabChange(id)}
+            style={{ flex: 1, background: "none", border: "none", padding: "10px 0 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+            <Icon size={20} color={color} />
+            <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
+            {active && <div style={{ width: 20, height: 2, borderRadius: 1, background: COLORS.accent }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 const DateSelector = ({ year, month, day, onYear, onMonth, onDay }) => {
   const yearOptions = ["2025", "2026", "2027"];
@@ -1351,7 +1358,7 @@ export default function App() {
             <button onClick={() => setView("achievement")}
               style={{ width: "100%", background: `linear-gradient(135deg, #e0a85515, #e0a85505)`, border: `1px solid #e0a85540`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>⭐</span>
+                <IconStar size={22} color="#e0a855" />
                 <div>
                   <div style={{ fontSize: 11, color: "#e0a855", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Achievement</div>
                   できたことログ
@@ -1362,22 +1369,11 @@ export default function App() {
             <button onClick={() => { setMemoView("list"); setView("memo"); }}
               style={{ width: "100%", background: `linear-gradient(135deg, #6b728015, #6b728005)`, border: `1px solid #6b728040`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>📝</span>
+                <IconNotes size={22} color="#9ca3af" />
                 <div>
                   <div style={{ fontSize: 11, color: "#9ca3af", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Memo</div>
                   メモ
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>日付＋タイトル＋本文を自由に記録</div>
-                </div>
-              </div>
-            </button>
-            <button onClick={() => { setMedicalView("list"); setView("medical"); }}
-              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🏥</span>
-                <div>
-                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
-                  診察・カウンセリング記録
-                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
                 </div>
               </div>
             </button>
@@ -1404,7 +1400,7 @@ export default function App() {
             <button onClick={() => { setMfRunning(false); setMfRemaining(null); setMfMinutes(5); setView("mindfulness"); }}
               style={{ width: "100%", background: `linear-gradient(135deg, #818cf815, #818cf805)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🧘</span>
+                <IconLeaf size={22} color="#818cf8" />
                 <div>
                   <div style={{ fontSize: 11, color: "#818cf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Mindfulness</div>
                   マインドフルネス
@@ -1435,7 +1431,7 @@ export default function App() {
             <button onClick={() => { setTellTab("pending"); setView("tellMemos"); }}
               style={{ width: "100%", background: `linear-gradient(135deg, #818cf815, #818cf805)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>💬</span>
+                <IconMessage size={22} color="#818cf8" />
                 <div>
                   <div style={{ fontSize: 11, color: "#818cf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Tell Memo</div>
                   伝えたいことメモ
@@ -1446,7 +1442,7 @@ export default function App() {
             <button onClick={() => setView("medicalLog")}
               style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🏥</span>
+                <IconStethoscope size={22} color={COLORS.accent} />
                 <div>
                   <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical Log</div>
                   診察等の記録
