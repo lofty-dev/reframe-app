@@ -457,6 +457,22 @@ const MEMO_KEY = "stride_memo";
 
 const TELL_PEOPLE_KEY = "stride_tell_people";
 const TELL_MEMOS_KEY = "stride_tell_memos";
+const SHINSA_SETTINGS_KEY = "stride_shinsa_settings";
+const SHINSA_MEMOS_KEY = "stride_shinsa_memos";
+
+const DEFAULT_SHINSA_SETTINGS = { showTellMemos: true, showMoodGraph: true, showSleep: true, showStress: true, showAchievement: true };
+
+const loadShinsaSettings = () => {
+  try { const s = localStorage.getItem(SHINSA_SETTINGS_KEY); if (s) return { ...DEFAULT_SHINSA_SETTINGS, ...JSON.parse(s) }; } catch (e) {}
+  return { ...DEFAULT_SHINSA_SETTINGS };
+};
+const saveShinsaSettings = (d) => { try { localStorage.setItem(SHINSA_SETTINGS_KEY, JSON.stringify(d)); } catch (e) {} };
+
+const loadShinsaMemos = () => {
+  try { const s = localStorage.getItem(SHINSA_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  return [];
+};
+const saveShinsaMemos = (d) => { try { localStorage.setItem(SHINSA_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
 
 const loadTellPeople = () => {
   try { const s = localStorage.getItem(TELL_PEOPLE_KEY); if (s) return JSON.parse(s); } catch (e) {}
@@ -563,6 +579,7 @@ const ALL_STORAGE_KEYS = [
   "reframe_records", "reframe_checkins", "reframe_copings",
   "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
   "stride_memo", "stride_tell_people", "stride_tell_memos",
+  "stride_shinsa_settings", "stride_shinsa_memos",
 ];
 
 const exportData = () => {
@@ -751,6 +768,10 @@ export default function App() {
   const [tellMemoDeleteId, setTellMemoDeleteId] = useState(null);
   const [tellPersonDeleteId, setTellPersonDeleteId] = useState(null);
 
+  const [shinsaSettings, setShinsaSettings] = useState(loadShinsaSettings);
+  const [shinsaMemos, setShinsaMemos] = useState(loadShinsaMemos);
+  const [shinsaMemoInput, setShinsaMemoInput] = useState("");
+
   const dndSensors = useSensors(useSensor(PointerSensor));
 
   const [visibleCount, setVisibleCount] = useState(10);
@@ -778,6 +799,8 @@ export default function App() {
   useEffect(() => { saveMemo(memos); }, [memos]);
   useEffect(() => { saveTellPeople(tellPeople); }, [tellPeople]);
   useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
+  useEffect(() => { saveShinsaSettings(shinsaSettings); }, [shinsaSettings]);
+  useEffect(() => { saveShinsaMemos(shinsaMemos); }, [shinsaMemos]);
 
   const sortedCopings = [...copings].sort((a, b) =>
     copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
@@ -1167,6 +1190,8 @@ export default function App() {
               else if (view === "list") { setView("records"); setActiveTab("records"); }
               else if (view === "achievement") { setView("records"); setActiveTab("records"); }
               else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "shinsa") { setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "shinsaSettings") { setView("shinsa"); }
               else if (view === "memo") {
                 if (memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 setView("records"); setActiveTab("records");
@@ -1209,6 +1234,8 @@ export default function App() {
                 {view === "mindfulness" && "マインドフルネス"}
                 {view === "settings" && "設定"}
                 {view === "medicalLog" && "診察等の記録"}
+                {view === "shinsa" && "診察モード"}
+                {view === "shinsaSettings" && "表示項目の設定"}
                 {view === "memo" && (memoView === "list" ? "メモ" : memoView === "new" ? "新しいメモ" : memoEditing ? "編集" : "メモの詳細")}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
@@ -1228,6 +1255,12 @@ export default function App() {
         )}
         {view === "home" && (
           <button onClick={() => setView("settings")}
+            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+            <IconSettings size={22} />
+          </button>
+        )}
+        {view === "shinsa" && (
+          <button onClick={() => setView("shinsaSettings")}
             style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
             <IconSettings size={22} />
           </button>
@@ -1428,6 +1461,17 @@ export default function App() {
         <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button onClick={() => setView("shinsa")}
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconChartLine size={22} color={COLORS.accent} />
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Shinsa Mode</div>
+                  診察モード
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>記録を一覧表示し、診察中にメモを取る</div>
+                </div>
+              </div>
+            </button>
             <button onClick={() => { setTellTab("pending"); setView("tellMemos"); }}
               style={{ width: "100%", background: `linear-gradient(135deg, #818cf815, #818cf805)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1451,6 +1495,181 @@ export default function App() {
               </div>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* SHINSA MODE */}
+      {view === "shinsa" && (() => {
+        const pendingTellMemos = tellMemos.filter(m => !m.completed);
+        const today = new Date();
+        const last14 = Array.from({ length: 14 }, (_, i) => {
+          const d = new Date(today); d.setDate(today.getDate() - (13 - i));
+          const ds = toDateStr(String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
+          const c = checkins.find(x => x.date === ds);
+          return { label: `${d.getMonth() + 1}/${d.getDate()}`, ds, mood: c?.mood ?? null, sleep: c?.sleep ?? null };
+        });
+        const moodColor = (m) => m >= 7 ? COLORS.accent : m >= 4 ? "#e0a855" : COLORS.danger;
+        const recentStress = [...records].sort((a, b) => b.id - a.id).slice(0, 5);
+        const recentAchievements = [...achievements].sort((a, b) => b.id - a.id).slice(0, 5);
+        const saveShinsaMemo = () => {
+          if (!shinsaMemoInput.trim()) return;
+          const ds = toDateStr(String(today.getFullYear()), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0"));
+          setShinsaMemos(prev => [{ id: Date.now(), date: ds, content: shinsaMemoInput.trim() }, ...prev]);
+          setShinsaMemoInput("");
+        };
+        return (
+          <div className="page" style={{ padding: "16px 16px 240px" }}>
+
+            {/* 伝えたいことメモ */}
+            {shinsaSettings.showTellMemos && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.psAccent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>伝えたいことメモ</div>
+                {pendingTellMemos.length === 0 ? (
+                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>未完了のメモはありません</div>
+                ) : (
+                  pendingTellMemos.map(m => {
+                    const people = m.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
+                    return (
+                      <div key={m.id} style={{ background: COLORS.surface, border: `1px solid #818cf840`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
+                        <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.6, marginBottom: 8, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {people.map(p => (
+                            <span key={p.id} style={{ background: "#818cf820", border: "1px solid #818cf840", color: "#818cf8", borderRadius: 8, padding: "2px 8px", fontSize: 11 }}>{p.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* 気分グラフ（14日） */}
+            {shinsaSettings.showMoodGraph && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>気分（直近2週間）</div>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
+                    {last14.map((d, i) => {
+                      const barH = d.mood !== null ? Math.max(4, (d.mood / 10) * 44) : 4;
+                      const color = d.mood !== null ? moodColor(d.mood) : COLORS.border;
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          {d.mood !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{d.mood}</div>}
+                          <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: d.mood !== null ? 1 : 0.2 }} />
+                          <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 睡眠記録（14日） */}
+            {shinsaSettings.showSleep && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
+                <div style={{ background: COLORS.surface, borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden" }}>
+                  {last14.filter(d => d.sleep).length === 0 ? (
+                    <div style={{ padding: "14px 16px", fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
+                  ) : (
+                    last14.filter(d => d.sleep).map((d, i) => (
+                      <div key={d.ds} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < last14.filter(x => x.sleep).length - 1 ? `1px solid ${COLORS.border}` : "none" }}>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{d.label}</div>
+                        <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>{d.sleep}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ストレス記録（直近5件） */}
+            {shinsaSettings.showStress && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>ストレス記録（直近5件）</div>
+                {recentStress.length === 0 ? (
+                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
+                ) : (
+                  recentStress.map(r => (
+                    <div key={r.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{r.date || r.createdAt?.slice(0, 10)}</div>
+                      <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.situation}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* できたことログ（直近5件） */}
+            {shinsaSettings.showAchievement && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#e0a855", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>できたことログ（直近5件）</div>
+                {recentAchievements.length === 0 ? (
+                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
+                ) : (
+                  recentAchievements.map(a => (
+                    <div key={a.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid #e0a85530` }}>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{a.date}</div>
+                      <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{a.text}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* 過去の診察中メモ */}
+            {shinsaMemos.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>過去の診察中メモ</div>
+                {shinsaMemos.map(m => (
+                  <div key={m.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
+                    <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 固定メモ入力パネル */}
+            <div style={{ position: "fixed", bottom: "calc(56px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, padding: "12px 16px", zIndex: 150, boxSizing: "border-box" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>診察中メモ</div>
+              <textarea value={shinsaMemoInput} onChange={e => setShinsaMemoInput(e.target.value)}
+                placeholder="気づいたこと、言われたことをメモする"
+                rows={2}
+                style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontSize: 13, boxSizing: "border-box", resize: "none", lineHeight: 1.5 }} />
+              <button onClick={saveShinsaMemo} disabled={!shinsaMemoInput.trim()}
+                style={{ marginTop: 8, width: "100%", padding: "9px 0", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 700, cursor: shinsaMemoInput.trim() ? "pointer" : "default",
+                  background: shinsaMemoInput.trim() ? COLORS.accent : COLORS.border,
+                  color: shinsaMemoInput.trim() ? "#0f1117" : COLORS.textMuted }}>
+                保存する
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* SHINSA SETTINGS */}
+      {view === "shinsaSettings" && (
+        <div className="page" style={{ padding: "16px 16px 100px" }}>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20, lineHeight: 1.6 }}>診察モードに表示する項目を選んでください</div>
+          {[
+            { key: "showTellMemos", label: "伝えたいことメモ（未完了）", color: COLORS.psAccent },
+            { key: "showMoodGraph", label: "気分のグラフ（直近2週間）", color: COLORS.accent },
+            { key: "showSleep", label: "睡眠の記録（直近2週間）", color: COLORS.accent },
+            { key: "showStress", label: "ストレス記録（直近5件）", color: COLORS.accent },
+            { key: "showAchievement", label: "できたことログ（直近5件）", color: "#e0a855" },
+          ].map(({ key, label, color }) => (
+            <div key={key} onClick={() => setShinsaSettings(prev => ({ ...prev, [key]: !prev[key] }))}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
+              <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>{label}</div>
+              <div style={{ width: 44, height: 26, borderRadius: 13, background: shinsaSettings[key] ? color : COLORS.border, position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: shinsaSettings[key] ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
