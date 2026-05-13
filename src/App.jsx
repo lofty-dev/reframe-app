@@ -3158,47 +3158,53 @@ export default function App() {
           {/* 入力モーダル */}
           {crisisModal && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
-              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
-                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12 }}>
-                  {crisisModal.type === "safe" && "安定しているときの状態"}
-                  {crisisModal.type === "caution_triggers" && "トリガー"}
-                  {crisisModal.type === "caution_signs" && "注意サイン"}
-                  {crisisModal.type === "crisis_signs" && "危機のサイン"}
-                  {crisisModal.type === "crisis_contacts" && "対処法・連絡先"}
-                </div>
-                <textarea rows={3} style={{ ...inp, marginBottom: 10 }}
-                  placeholder={
-                    crisisModal.type === "safe" ? "例）よく眠れている、趣味を楽しめている" :
-                    crisisModal.type === "caution_triggers" ? "例）締め切りが重なる" :
-                    crisisModal.type === "caution_signs" ? "例）イライラしやすくなる" :
-                    crisisModal.type === "crisis_signs" ? "例）希死念慮が出てくる" :
-                    "例）〇〇クリニック（主治医）/ 深呼吸して落ち着く"
-                  }
-                  value={crisisModal.text}
-                  onChange={(e) => setCrisisModal({ ...crisisModal, text: e.target.value })}
-                  autoFocus
-                />
-                {crisisModal.type !== "safe" && crisisModal.type !== "crisis_signs" && crisisModal.type !== "crisis_contacts" && (
-                  <textarea rows={2} style={{ ...inp, marginBottom: 16 }}
-                    placeholder="対処法を書いておこう"
-                    value={crisisModal.text2}
-                    onChange={(e) => setCrisisModal({ ...crisisModal, text2: e.target.value })}
-                  />
-                )}
-                <div style={{ display: "flex", gap: 10, marginTop: crisisModal.type === "safe" ? 16 : 0 }}>
-                  <button onClick={() => setCrisisModal(null)}
-                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
-                  <button onClick={() => {
-                    if (!crisisModal.text.trim()) return;
-                    if (crisisModal.editId) {
-                      updateCrisisItem(crisisModal.type, crisisModal.editId, crisisModal.text, crisisModal.text2);
-                    } else {
-                      addCrisisItem(crisisModal.type, crisisModal.text, crisisModal.text2);
+              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", maxHeight: "min(80vh, 80dvh)", boxSizing: "border-box" }}>
+                {/* スクロール可能なコンテンツ */}
+                <div style={{ overflowY: "auto", padding: "24px 20px 16px", flex: 1, minHeight: 0 }}>
+                  <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12 }}>
+                    {crisisModal.type === "safe" && "安定しているときの状態"}
+                    {crisisModal.type === "caution_triggers" && "トリガー"}
+                    {crisisModal.type === "caution_signs" && "注意サイン"}
+                    {crisisModal.type === "crisis_signs" && "危機のサイン"}
+                    {crisisModal.type === "crisis_contacts" && "対処法・連絡先"}
+                  </div>
+                  <textarea rows={3} style={{ ...inp, marginBottom: 10 }}
+                    placeholder={
+                      crisisModal.type === "safe" ? "例）よく眠れている、趣味を楽しめている" :
+                      crisisModal.type === "caution_triggers" ? "例）締め切りが重なる" :
+                      crisisModal.type === "caution_signs" ? "例）イライラしやすくなる" :
+                      crisisModal.type === "crisis_signs" ? "例）希死念慮が出てくる" :
+                      "例）〇〇クリニック（主治医）/ 深呼吸して落ち着く"
                     }
-                    setCrisisModal(null);
-                  }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
-                    {crisisModal.editId ? "更新する" : "追加する"}
-                  </button>
+                    value={crisisModal.text}
+                    onChange={(e) => setCrisisModal({ ...crisisModal, text: e.target.value })}
+                    autoFocus
+                  />
+                  {crisisModal.type !== "safe" && crisisModal.type !== "crisis_signs" && crisisModal.type !== "crisis_contacts" && (
+                    <textarea rows={2} style={{ ...inp }}
+                      placeholder="対処法を書いておこう"
+                      value={crisisModal.text2}
+                      onChange={(e) => setCrisisModal({ ...crisisModal, text2: e.target.value })}
+                    />
+                  )}
+                </div>
+                {/* 常時表示のボタン */}
+                <div style={{ padding: "12px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", borderTop: `1px solid ${COLORS.border}`, background: COLORS.surface, flexShrink: 0 }}>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setCrisisModal(null)}
+                      style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+                    <button onClick={() => {
+                      if (!crisisModal.text.trim()) return;
+                      if (crisisModal.editId) {
+                        updateCrisisItem(crisisModal.type, crisisModal.editId, crisisModal.text, crisisModal.text2);
+                      } else {
+                        addCrisisItem(crisisModal.type, crisisModal.text, crisisModal.text2);
+                      }
+                      setCrisisModal(null);
+                    }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                      {crisisModal.editId ? "更新する" : "追加する"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
