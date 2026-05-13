@@ -749,6 +749,11 @@ export default function App() {
 
   const [copings, setCopings] = useState(loadCopings);
   const [copingSort, setCopingSort] = useState("difficulty");
+  const [copingSortDir, setCopingSortDir] = useState("asc");
+  const [copingEditId, setCopingEditId] = useState(null);
+  const [copingEditText, setCopingEditText] = useState("");
+  const [copingEditDifficulty, setCopingEditDifficulty] = useState(null);
+  const [copingEditEffect, setCopingEditEffect] = useState(null);
   const [newCoping, setNewCoping] = useState({ text: "", difficulty: null, effect: null });
   const [copingDeleteId, setCopingDeleteId] = useState(null);
 
@@ -828,9 +833,11 @@ export default function App() {
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
 
-  const sortedCopings = [...copings].sort((a, b) =>
-    copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
-  );
+  const sortedCopings = [...copings].sort((a, b) => {
+    const valA = copingSort === "difficulty" ? a.difficulty : a.effect;
+    const valB = copingSort === "difficulty" ? b.difficulty : b.effect;
+    return copingSortDir === "asc" ? valA - valB : valB - valA;
+  });
 
   const recentCheckins = (() => {
     const result = [];
@@ -1392,12 +1399,18 @@ export default function App() {
           {/* ガイド・サポート */}
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setView("guide")}
-              style={{ flex: 1, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 12, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-              📖 使い方ガイド
+              style={{ flex: 1, background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <IconNotes size={18} color={COLORS.accent} />
+                <span>使い方ガイド</span>
+              </div>
             </button>
             <button onClick={() => setView("support")}
-              style={{ flex: 1, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 12, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-              💬 フィードバック
+              style={{ flex: 1, background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <IconMessage size={18} color={COLORS.accent} />
+                <span>フィードバック</span>
+              </div>
             </button>
           </div>
         </div>
@@ -1567,13 +1580,15 @@ export default function App() {
               ))}
             </div>
           )}
+          <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
       {/* BRIDGE SESSION MAIN */}
       {view === "bridge" && (() => {
         const person = tellPeople.find(p => p.id === bridgePersonId);
-        const personPendingMemos = tellMemos.filter(m => !m.completed && m.personIds.includes(bridgePersonId));
+        const personAllMemos = tellMemos.filter(m => m.personIds.includes(bridgePersonId));
+        const personPendingMemos = personAllMemos.filter(m => !m.completed);
         const today = new Date();
         const todayDs = toDateStr(String(today.getFullYear()), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0"));
         const last14 = Array.from({ length: 14 }, (_, i) => {
@@ -1609,20 +1624,24 @@ export default function App() {
             {bridgeSettings.showTellMemos && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.psAccent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>伝えたいことメモ</div>
-                {personPendingMemos.length === 0 ? (
-                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>未完了のメモはありません</div>
+                {personAllMemos.length === 0 ? (
+                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>メモはありません</div>
                 ) : (
-                  personPendingMemos.map(m => {
+                  personAllMemos.map(m => {
                     const check = m.checks[bridgePersonId] || { checked: false };
                     return (
-                      <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${check.checked ? "#818cf860" : "#818cf840"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, opacity: check.checked ? 0.65 : 1 }}>
+                      <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${m.completed ? "#818cf860" : "#818cf840"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, opacity: m.completed ? 0.65 : 1 }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
                           <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
-                          <button onClick={() => toggleTellCheck(m.id, bridgePersonId)}
-                            style={{ padding: "4px 10px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, marginLeft: 8,
-                              background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
-                            {check.checked ? "✓ 伝えた" : "伝えた"}
-                          </button>
+                          {m.completed ? (
+                            <span style={{ padding: "4px 10px", borderRadius: 8, background: "#818cf820", color: "#818cf8", fontSize: 12, fontWeight: 600, flexShrink: 0, marginLeft: 8 }}>✓ 完了</span>
+                          ) : (
+                            <button onClick={() => toggleTellCheck(m.id, bridgePersonId)}
+                              style={{ padding: "4px 10px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, marginLeft: 8,
+                                background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
+                              {check.checked ? "✓ 伝えた" : "伝えた"}
+                            </button>
+                          )}
                         </div>
                         <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
                       </div>
@@ -1669,7 +1688,7 @@ export default function App() {
                         const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
                         return (
                           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                            {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
+                            <div style={{ height: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: lv !== null ? color : "transparent", fontWeight: 700 }}>{lv ?? "0"}</div>
                             <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: lv !== null ? 1 : 0.2 }} />
                             <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
                           </div>
@@ -2264,7 +2283,7 @@ export default function App() {
               </div>
             )}
 
-            <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
             {achievementDeleteId && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}>
@@ -2292,7 +2311,9 @@ export default function App() {
 
           {!mfRunning && mfRemaining === null && (
             <>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🧘</div>
+              <div style={{ width: 72, height: 72, borderRadius: 20, background: "#818cf820", border: "1.5px solid #818cf840", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <IconLeaf size={40} color="#818cf8" />
+              </div>
               <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>マインドフルネス</div>
               <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 1.8, marginBottom: 24, maxWidth: 280 }}>
                 時間を設定してスタートしましょう。タイマーが終わると音が鳴ります。<br />
@@ -2328,10 +2349,10 @@ export default function App() {
 
               <div style={{ marginBottom: 40, width: "100%" }}>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 16 }}>時間を選ぶ</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                   {[1, 3, 5, 7, 10].map(m => (
                     <button key={m} onClick={() => setMfMinutes(m)}
-                      style={{ width: 64, height: 64, borderRadius: "50%", border: `2px solid ${mfMinutes === m ? "#818cf8" : COLORS.border}`, background: mfMinutes === m ? "#818cf820" : COLORS.surface, color: mfMinutes === m ? "#818cf8" : COLORS.textMuted, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ width: 52, height: 52, borderRadius: "50%", border: `2px solid ${mfMinutes === m ? "#818cf8" : COLORS.border}`, background: mfMinutes === m ? "#818cf820" : COLORS.surface, color: mfMinutes === m ? "#818cf8" : COLORS.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                       {m}分
                     </button>
                   ))}
@@ -2476,7 +2497,7 @@ export default function App() {
 
           {(!mfRunning && mfRemaining === null) && (
             <div style={{ marginTop: 40, width: "100%" }}>
-              <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+              <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
             </div>
           )}
         </div>
@@ -2637,7 +2658,7 @@ export default function App() {
                 ))}
               </div>
             )}
-            <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -2792,7 +2813,7 @@ export default function App() {
               もっと見る（残り{records.length - visibleCount}件）
             </button>
           )}
-          <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
@@ -2806,13 +2827,13 @@ export default function App() {
           {/* ソート切り替え */}
           {copings.length > 0 && (
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => setCopingSort("difficulty")}
+              <button onClick={() => { if (copingSort === "difficulty") { setCopingSortDir(d => d === "asc" ? "desc" : "asc"); } else { setCopingSort("difficulty"); setCopingSortDir("asc"); } }}
                 style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${copingSort === "difficulty" ? COLORS.accent : COLORS.border}`, background: copingSort === "difficulty" ? COLORS.accentSoft : COLORS.surface, color: copingSort === "difficulty" ? COLORS.accentText : COLORS.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                難易度順
+                難易度順 {copingSort === "difficulty" ? (copingSortDir === "asc" ? "↑" : "↓") : ""}
               </button>
-              <button onClick={() => setCopingSort("effect")}
+              <button onClick={() => { if (copingSort === "effect") { setCopingSortDir(d => d === "asc" ? "desc" : "asc"); } else { setCopingSort("effect"); setCopingSortDir("desc"); } }}
                 style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${copingSort === "effect" ? COLORS.accent : COLORS.border}`, background: copingSort === "effect" ? COLORS.accentSoft : COLORS.surface, color: copingSort === "effect" ? COLORS.accentText : COLORS.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                効果順
+                効果順 {copingSort === "effect" ? (copingSortDir === "asc" ? "↑" : "↓") : ""}
               </button>
             </div>
           )}
@@ -2826,7 +2847,11 @@ export default function App() {
               <div key={c.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ flex: 1, fontSize: 15, lineHeight: 1.6, color: COLORS.text }}>{c.text}</div>
-                  <button onClick={() => setCopingDeleteId(c.id)} style={{ flexShrink: 0, background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", opacity: 0.5 }}>×</button>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => { setCopingEditId(c.id); setCopingEditText(c.text); setCopingEditDifficulty(c.difficulty); setCopingEditEffect(c.effect); }}
+                      style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
+                    <button onClick={() => setCopingDeleteId(c.id)} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", opacity: 0.5 }}>×</button>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
                   <div style={{ fontSize: 12, color: COLORS.textMuted }}>
@@ -2844,7 +2869,7 @@ export default function App() {
 
           {/* コーピング削除確認 */}
           {copingDeleteId && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
               <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>このコーピングを削除しますか？</div>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
@@ -2857,7 +2882,47 @@ export default function App() {
               </div>
             </div>
           )}
-          <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+          {copingEditId && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 300 }}>
+              <div style={{ background: COLORS.surface, borderRadius: "16px 16px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, boxSizing: "border-box" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>コーピングを編集</div>
+                <textarea rows={3} style={{ ...inp, marginBottom: 16 }} value={copingEditText} onChange={e => setCopingEditText(e.target.value)} />
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>難易度（1〜5）</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setCopingEditDifficulty(n)}
+                        style={{ flex: 1, height: 40, borderRadius: 10, border: `2px solid ${copingEditDifficulty === n ? COLORS.accent : COLORS.border}`, background: copingEditDifficulty === n ? COLORS.accentSoft : COLORS.surface, color: copingEditDifficulty === n ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>効果（1〜5）</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setCopingEditEffect(n)}
+                        style={{ flex: 1, height: 40, borderRadius: 10, border: `2px solid ${copingEditEffect === n ? COLORS.accent : COLORS.border}`, background: copingEditEffect === n ? COLORS.accentSoft : COLORS.surface, color: copingEditEffect === n ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setCopingEditId(null)}
+                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+                  <button onClick={() => {
+                    if (!copingEditText.trim() || !copingEditDifficulty || !copingEditEffect) return;
+                    const updated = copings.map(c => c.id === copingEditId ? { ...c, text: copingEditText.trim(), difficulty: copingEditDifficulty, effect: copingEditEffect } : c);
+                    setCopings(updated); saveCopings(updated); setCopingEditId(null);
+                  }} disabled={!copingEditText.trim() || !copingEditDifficulty || !copingEditEffect}
+                    style={{ flex: 2, background: copingEditText.trim() && copingEditDifficulty && copingEditEffect ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingEditText.trim() && copingEditDifficulty && copingEditEffect ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>保存する</button>
+                </div>
+              </div>
+            </div>
+          )}
+          <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
@@ -2936,7 +3001,7 @@ export default function App() {
                   <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
                     <button onClick={() => setCrisisModal({ type: "safe", editId: item.id, text: item.text, text2: "" })}
-                      style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                      style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                     <button onClick={() => deleteCrisisItem("safe", item.id)}
                       style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
                   </div>
@@ -2968,7 +3033,7 @@ export default function App() {
                           {item.text2 && <div style={{ fontSize: 12, color: "#e0a855", borderTop: `1px solid ${COLORS.border}`, paddingTop: 6, marginTop: 4 }}>対処法：{item.text2}</div>}
                         </div>
                         <button onClick={() => setCrisisModal({ type: "caution_triggers", editId: item.id, text: item.text, text2: item.text2 })}
-                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                         <button onClick={() => deleteCrisisItem("caution_triggers", item.id)}
                           style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
                       </div>
@@ -2991,7 +3056,7 @@ export default function App() {
                           {item.text2 && <div style={{ fontSize: 12, color: "#e0a855", borderTop: `1px solid ${COLORS.border}`, paddingTop: 6, marginTop: 4 }}>対処法：{item.text2}</div>}
                         </div>
                         <button onClick={() => setCrisisModal({ type: "caution_signs", editId: item.id, text: item.text, text2: item.text2 })}
-                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                         <button onClick={() => deleteCrisisItem("caution_signs", item.id)}
                           style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
                       </div>
@@ -3022,7 +3087,7 @@ export default function App() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, fontSize: 14, color: COLORS.text }}>{item.text}</div>
                         <button onClick={() => setCrisisModal({ type: "crisis_signs", editId: item.id, text: item.text, text2: "" })}
-                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                         <button onClick={() => deleteCrisisItem("crisis_signs", item.id)}
                           style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
                       </div>
@@ -3042,7 +3107,7 @@ export default function App() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
                         <button onClick={() => setCrisisModal({ type: "crisis_contacts", editId: item.id, text: item.text, text2: "" })}
-                          style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: 0 }}>編集</button>
+                          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                         <button onClick={() => deleteCrisisItem("crisis_contacts", item.id)}
                           style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
                       </div>
@@ -3062,7 +3127,7 @@ export default function App() {
             📄 PDFとして保存する
           </button>
 
-          <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
           {/* クライシスプラン印刷用コンテンツ */}
           <div className="print-only print-container">
@@ -3093,7 +3158,7 @@ export default function App() {
           {/* 入力モーダル */}
           {crisisModal && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
-              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
+              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12 }}>
                   {crisisModal.type === "safe" && "安定しているときの状態"}
                   {crisisModal.type === "caution_triggers" && "トリガー"}
@@ -3322,7 +3387,7 @@ export default function App() {
                     <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>よく出た感情</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {topEmotions.map(([name, count], i) => (
-                        <div key={name} style={{ padding: "6px 14px", borderRadius: 20, background: i === 0 ? COLORS.accentSoft : COLORS.bg, border: `1px solid ${i === 0 ? COLORS.accent : COLORS.border}`, fontSize: 13, color: i === 0 ? COLORS.accent : COLORS.textMuted }}>
+                        <div key={name} style={{ padding: "6px 14px", borderRadius: 20, background: COLORS.bg, border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>
                           {name} <span style={{ fontSize: 11 }}>{count}回</span>
                         </div>
                       ))}
