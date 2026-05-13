@@ -3157,8 +3157,8 @@ export default function App() {
 
           {/* 入力モーダル */}
           {crisisModal && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 }}>
-              <div style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", maxHeight: "min(80vh, 80dvh)", boxSizing: "border-box" }}>
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "0 16px" }}>
+              <div style={{ background: COLORS.surface, borderRadius: 16, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
                 {/* スクロール可能なコンテンツ */}
                 <div style={{ overflowY: "auto", padding: "24px 20px 16px", flex: 1, minHeight: 0 }}>
                   <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12 }}>
@@ -3189,7 +3189,7 @@ export default function App() {
                   )}
                 </div>
                 {/* 常時表示のボタン */}
-                <div style={{ padding: "12px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", borderTop: `1px solid ${COLORS.border}`, background: COLORS.surface, flexShrink: 0 }}>
+                <div style={{ padding: "12px 20px 20px", borderTop: `1px solid ${COLORS.border}`, flexShrink: 0 }}>
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setCrisisModal(null)}
                       style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
