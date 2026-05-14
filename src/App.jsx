@@ -1373,7 +1373,7 @@ export default function App() {
             const moodColor = (m) => m >= 7 ? COLORS.accent : m >= 4 ? "#e0a855" : COLORS.danger;
             return (
               <div style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>過去7日間の気分</div>
                   <button onClick={() => setView("checkinHistory")}
                     style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 11, cursor: "pointer", padding: 0 }}>詳細 →</button>
@@ -1658,7 +1658,7 @@ export default function App() {
             {bridgeSettings.showMoodGraph && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>気分（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "20px 14px 12px", border: `1px solid ${COLORS.border}` }}>
                   <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
                     {last14.map((d, i) => {
                       const barH = d.mood !== null ? Math.max(4, (d.mood / 10) * 44) : 4;
@@ -1680,7 +1680,7 @@ export default function App() {
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "20px 14px 12px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
                     <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
