@@ -1658,7 +1658,7 @@ export default function App() {
             {bridgeSettings.showMoodGraph && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>気分（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "18px 14px 12px", border: `1px solid ${COLORS.border}` }}>
                   <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
                     {last14.map((d, i) => {
                       const barH = d.mood !== null ? Math.max(4, (d.mood / 10) * 44) : 4;
@@ -1680,7 +1680,7 @@ export default function App() {
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "18px 14px 12px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
                     <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
