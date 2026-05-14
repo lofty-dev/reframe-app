@@ -332,10 +332,17 @@ const PS_STEPS = [
     hint: "「効果的か」「実際にできそうか」も一緒に書けると選びやすくなるよ。パーセントでなくても○△×でもOK。",
   },
   {
-    id: "plan",
-    label: "実行計画",
-    question: "まず何から試しますか？いつ、どうやってやるか書いてみよう",
-    placeholder: "例）明日の朝、作業前に手順メモを作る。5分でいいのでやってみる",
+    id: "selectPlan",
+    label: "解決策を選ぶ",
+    question: "まず何から試しますか？",
+    placeholder: "",
+    hint: "「完璧にできそう」じゃなくて「少し試せそう」で選ぼう。小さく始めるのがコツ。",
+  },
+  {
+    id: "planWhen",
+    label: "実行タイミング",
+    question: "具体的にいつやりますか？",
+    placeholder: "例）明日の朝、作業前に5分だけやってみる",
     hint: "「完璧にやる」じゃなく「実験としてやってみる」くらいの気持ちで。小さく始めるのがコツ。",
   },
 ];
@@ -3706,7 +3713,17 @@ export default function App() {
               {PS_STEPS.map((step) => selectedDetail.ps[step.id] ? (
                 <div key={step.id} style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{step.label}</div>
-                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>{selectedDetail.ps[step.id]}</div>
+                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>
+                    {(step.id === "breakdown" || step.id === "solutions")
+                      ? selectedDetail.ps[step.id].split("\n").filter(s => s.trim()).map((t, i, arr) => (
+                          <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < arr.length - 1 ? 8 : 0 }}>
+                            <span style={{ color: COLORS.textMuted, minWidth: 16 }}>{i + 1}</span>
+                            <span>{t}</span>
+                          </div>
+                        ))
+                      : selectedDetail.ps[step.id]
+                    }
+                  </div>
                 </div>
               ) : null)}
             </div>
@@ -3886,7 +3903,8 @@ export default function App() {
         const isBreakdownStep = PS_STEPS[psStep].id === "breakdown";
         const isTargetStep = PS_STEPS[psStep].id === "target";
         const isSolutionsStep = PS_STEPS[psStep].id === "solutions";
-        const isPlanStep = PS_STEPS[psStep].id === "plan";
+        const isSelectPlanStep = PS_STEPS[psStep].id === "selectPlan";
+        const isPlanWhenStep = PS_STEPS[psStep].id === "planWhen";
         const solutionTexts = psSolutionItems.map(s => s.text).filter(t => t.trim());
         const breakdownTexts = (psDraft.breakdown || "").split("\n").filter(t => t.trim());
 
@@ -3991,24 +4009,33 @@ export default function App() {
                   ＋ 解決策を追加する
                 </button>
               </div>
-            ) : isPlanStep ? (
+            ) : isSelectPlanStep ? (
               <div>
-                {solutionTexts.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>解決策から選ぶ</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {solutionTexts.map((t, i) => (
-                        <button key={i} onClick={() => setPsDraft(prev => ({ ...prev, plan: t }))}
-                          style={{ textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${psDraft.plan === t ? "#818cf8" : COLORS.border}`, background: psDraft.plan === t ? "#818cf820" : COLORS.surface, color: psDraft.plan === t ? "#818cf8" : COLORS.text, fontSize: 13, cursor: "pointer" }}>
-                          {i + 1}. {t}
-                        </button>
-                      ))}
-                    </div>
+                {solutionTexts.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {solutionTexts.map((t, i) => (
+                      <button key={i} onClick={() => setPsDraft(prev => ({ ...prev, selectPlan: t }))}
+                        style={{ textAlign: "left", padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${psDraft.selectPlan === t ? "#818cf8" : COLORS.border}`, background: psDraft.selectPlan === t ? "#818cf820" : COLORS.surface, color: psDraft.selectPlan === t ? "#818cf8" : COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
+                        {i + 1}. {t}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: COLORS.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>
+                    前のステップで解決策を入力してください
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>または自由に入力</div>
+              </div>
+            ) : isPlanWhenStep ? (
+              <div>
+                {psDraft.selectPlan && (
+                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#818cf8", marginBottom: 16, border: `1px solid #818cf830` }}>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>選んだ解決策</div>
+                    {psDraft.selectPlan}
+                  </div>
+                )}
                 <textarea
-                  rows={3}
+                  rows={4}
                   style={inp}
                   placeholder={PS_STEPS[psStep].placeholder}
                   value={psDraft[PS_STEPS[psStep].id] || ""}
@@ -4086,10 +4113,11 @@ export default function App() {
                 {rec.ps.target}
               </div>
             )}
-            {rec.ps?.plan && (
+            {(rec.ps?.selectPlan || rec.ps?.planWhen) && (
               <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#818cf8", marginBottom: 16, border: `1px solid #818cf830` }}>
                 <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>実行したプラン</div>
-                {rec.ps.plan}
+                {rec.ps.selectPlan && <div style={{ marginBottom: rec.ps.planWhen ? 6 : 0 }}>{rec.ps.selectPlan}</div>}
+                {rec.ps.planWhen && <div style={{ color: COLORS.textMuted, fontSize: 11 }}>タイミング：{rec.ps.planWhen}</div>}
               </div>
             )}
             <div style={{ marginBottom: 16 }}>
