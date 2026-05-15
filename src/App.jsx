@@ -928,6 +928,10 @@ export default function App() {
 
   const [guideOpenIndex, setGuideOpenIndex] = useState(null);
   const [helpModal, setHelpModal] = useState(null);
+  useEffect(() => {
+    document.body.style.overflow = helpModal ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [helpModal]);
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
