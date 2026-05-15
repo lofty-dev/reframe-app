@@ -4516,7 +4516,15 @@ export default function App() {
                 )}
                 <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                   {cbtStep > 0 && (
-                    <button onClick={() => { setCbtStep(cbtStep - 1); setShowHint(false); }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
+                    <button onClick={() => {
+                      if (inThoughtSelect) {
+                        const atIdx = steps.findIndex(s => s.id === "autoThought" || s.id === "autoThought3");
+                        setCbtStep(atIdx >= 0 ? atIdx : cbtStep - 1);
+                      } else {
+                        setCbtStep(cbtStep - 1);
+                      }
+                      setShowHint(false);
+                    }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
                   )}
                   <button
                     onClick={() => { if (cbtStep < steps.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
