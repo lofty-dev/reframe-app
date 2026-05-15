@@ -1032,7 +1032,7 @@ export default function App() {
   };
 
   const savePsReview = () => {
-    setRecords(prev => prev.map(r => r.id === psReviewId ? { ...r, ps: { ...r.ps, status: "done", review: psReviewDraft } } : r));
+    setRecords(prev => prev.map(r => r.id === psReviewId ? { ...r, completed: true, ps: { ...r.ps, status: "done", review: psReviewDraft } } : r));
     setView("list");
   };
 
@@ -1060,7 +1060,7 @@ export default function App() {
 
   const saveCopingReview = () => {
     if (!copingReviewResult) return;
-    setRecords(prev => prev.map(r => r.id === copingReviewId ? { ...r, copingStatus: "done", copingReview: copingReviewResult } : r));
+    setRecords(prev => prev.map(r => r.id === copingReviewId ? { ...r, completed: true, copingStatus: "done", copingReview: copingReviewResult } : r));
     setView("list");
   };
 
