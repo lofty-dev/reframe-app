@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -700,6 +700,75 @@ const ONBOARDING_SLIDES = [
   },
 ];
 
+const HELP_CONTENT = {
+  checkinHistory: {
+    title: "チェックイン履歴",
+    purpose: "自分の状態を毎日記録して、気分や体調のパターンを把握するための機能",
+    usage: ["気分を1〜10で記録", "体調・睡眠を選択", "ひとことメモを任意で記入"],
+    points: ["毎日続けることで週次レポートやグラフで自分の波が見えてくる", "完璧に書かなくていい、気分の数字だけでもOK"],
+  },
+  list: {
+    title: "ストレス記録",
+    purpose: "気になった出来事やストレスを記録して、認知再構成・問題解決・コーピングで対処するための機能",
+    usage: ["気になった出来事や状況を記録", "カテゴリ・強度・浮かんだ考えを任意で記入", "記録後にアプローチを選んで対処できる"],
+    points: ["その場で対処できなくてもまず記録だけでもOK", "認知再構成・問題解決は記録後に「続きから」で再開できる", "対処後の振り返りまで書くと完了になる"],
+  },
+  cbt: {
+    title: "認知再構成",
+    purpose: "ストレスを感じたときの自動的な思考パターンに気づき、バランスのとれた見方を見つけるための機能",
+    usage: ["3コラム：感情・自動思考・バランス思考をシンプルに整理", "7コラム：より詳しく、根拠・反証・認知のクセまで掘り下げる", "ストレス記録からアプローチとして選んで使う"],
+    points: ["慣れないうちは3コラムから始めるのがおすすめ", "認知のクセに気づくだけでも十分な効果がある", "途中で止めても「続きから」で再開できる"],
+  },
+  ps: {
+    title: "問題解決技法",
+    purpose: "漠然とした悩みや困りごとを整理して、具体的な行動プランを立てるための機能",
+    usage: ["困りごとを細かく分解して整理", "対処できそうなものを選んで解決策を考える", "いつやるかを決めて行動に移す", "後日、結果と気づきを振り返りとして記録する"],
+    points: ["問題が大きく感じるときほど、小さく分解するのが大事", "完璧な解決策でなくていい、試してみることが大切", "振り返りまで書くと完了になる"],
+  },
+  coping: {
+    title: "コーピングリスト",
+    purpose: "つらいときや気分を切り替えたいときに使える対処法をリスト化して、すぐに実践できるようにするための機能",
+    usage: ["コーピングリストに自分なりの対処法を登録", "難易度・効果で整理してソートできる", "ストレス記録からアプローチとして選ぶか、コーピング一覧から直接実践できる", "実践後に効果を記録して振り返れる"],
+    points: ["調子が悪いときほど考える余裕がないので、事前にリストを充実させておくのがおすすめ", "難易度が低いものから試してみよう", "効果の記録を続けると、自分に合うコーピングがわかってくる"],
+  },
+  achievement: {
+    title: "できたことログ",
+    purpose: "毎日の小さな達成や良かったことを記録して、自己肯定感を育てるための機能",
+    usage: ["今日できたことを自由に記録", "カレンダーで過去の記録を振り返れる", "連続記録日数で継続のモチベーションを確認できる"],
+    points: ["大きなことでなくていい、「朝ごはんを食べた」「外に出られた」でも十分", "調子が悪い日こそ、小さなことを記録してみよう", "積み重ねた記録が自信につながっていく"],
+  },
+  mindfulness: {
+    title: "マインドフルネス",
+    purpose: "今この瞬間に意識を向けて、気持ちを落ち着かせるための機能",
+    usage: ["1・3・5・7・10分から時間を選んでタイマーをスタート", "ホワイトノイズのBGMを流しながら瞑想できる", "終了時にベル音で知らせてくれる"],
+    points: ["慣れないうちは1〜3分から始めるのがおすすめ", "呼吸に意識を向けるだけでOK、うまくやろうとしなくていい", "気分が落ち着かないとき、寝る前のリラックスにも使える"],
+  },
+  crisis: {
+    title: "クライシスプラン",
+    purpose: "調子が悪くなったときに備えて、自分の状態のサインや対処法・連絡先をあらかじめ整理しておくための機能",
+    usage: ["SAFE：安定しているときの自分の状態を記録", "CAUTION：調子が崩れるサインや引き金になることを記録", "CRISIS：危機状態のサインと連絡先を記録", "PDF出力して診察に持参することもできる"],
+    points: ["調子が良いときに作っておくのが大事", "主治医や支援者と一緒に内容を確認するとより効果的", "いざというときにすぐ見られるように、内容を定期的に見直そう"],
+  },
+  tellMemos: {
+    title: "伝えたいことメモ",
+    purpose: "診察や面談で伝えたいことを事前に整理して、言いたいことをちゃんと伝えられるようにするための機能",
+    usage: ["伝えたいことを自由に記入", "誰に伝えるかを登録済みの人物から選ぶ", "診察・面談中に伝えた人にチェックをつける", "チェック後にその人から言われたことを記録できる", "全員チェック済みで完了になる"],
+    points: ["緊張すると言いたいことを忘れがち、事前にメモしておくと安心", "完了したメモは診察等の記録に自動的に反映される", "人物はあらかじめ登録しておくと毎回選ぶだけでOK"],
+  },
+  bridge: {
+    title: "Bridge Session",
+    purpose: "診察や面談の場で、自分の記録を見ながら支援者と話せるようにするための機能",
+    usage: ["誰との話かを選んでSessionを開始", "気分グラフ・睡眠・ストレス記録・伝えたいことメモなど表示する項目をカスタマイズできる", "Session中にその場でメモを取れる", "メモを保存すると伝えたいことメモの回答欄に自動で記録される"],
+    points: ["診察室でそのままスマホを見せながら話せる", "「うまく説明できない」「何を話せばいいかわからない」というときに特に役立つ", "表示項目は自分に合わせてカスタマイズしよう"],
+  },
+  medicalLog: {
+    title: "診察等の記録",
+    purpose: "主治医・精神保健福祉士・カウンセラーなど、支援者ごとのやりとりの履歴を振り返るための機能",
+    usage: ["登録した人物ごとにタブで切り替えて記録を確認", "伝えたいことメモで完了したものが自動的に反映される", "言われたことや伝えたことを時系列で振り返れる"],
+    points: ["別途記録しなくても伝えたいことメモと自動で同期される", "「あのとき何を言われたっけ？」という振り返りに役立つ", "Bridge Sessionのメモも合わせて確認できる"],
+  },
+};
+
 const saveCopings = (copings) => {
   try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
 };
@@ -858,6 +927,7 @@ export default function App() {
   const [mfInfoOpen, setMfInfoOpen] = useState(false);
 
   const [guideOpenIndex, setGuideOpenIndex] = useState(null);
+  const [helpModal, setHelpModal] = useState(null);
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
@@ -1383,23 +1453,31 @@ export default function App() {
             )}
           </div>
         </div>
-        {view === "detail" && !editing && selectedDetail && (
-          <button onClick={() => startEdit(selectedDetail)} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, fontWeight: 600, padding: "8px 14px", cursor: "pointer" }}>
-            編集
-          </button>
-        )}
-        {view === "home" && (
-          <button onClick={() => setView("settings")}
-            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
-            <IconSettings size={22} />
-          </button>
-        )}
-        {view === "bridge" && (
-          <button onClick={() => setView("bridgeSettings")}
-            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
-            <IconSettings size={22} />
-          </button>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {view === "detail" && !editing && selectedDetail && (
+            <button onClick={() => startEdit(selectedDetail)} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, fontWeight: 600, padding: "8px 14px", cursor: "pointer" }}>
+              編集
+            </button>
+          )}
+          {view === "home" && (
+            <button onClick={() => setView("settings")}
+              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+              <IconSettings size={22} />
+            </button>
+          )}
+          {view === "bridge" && (
+            <button onClick={() => setView("bridgeSettings")}
+              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+              <IconSettings size={22} />
+            </button>
+          )}
+          {["checkinHistory", "list", "cbt", "ps", "coping", "achievement", "mindfulness", "crisis", "tellMemos", "bridge", "medicalLog"].includes(view) && (
+            <button onClick={() => setHelpModal(view)}
+              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+              <IconHelpCircle size={22} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* HOME */}
@@ -4848,6 +4926,54 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ヘルプモーダル */}
+      {helpModal && (() => {
+        const h = HELP_CONTENT[helpModal];
+        if (!h) return null;
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400, padding: "0 0 0 0" }}
+            onClick={() => setHelpModal(null)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {/* ハンドル */}
+              <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 0" }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: COLORS.border }} />
+              </div>
+              {/* タイトル */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px 8px" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>{h.title}</div>
+                <button onClick={() => setHelpModal(null)}
+                  style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 4, lineHeight: 1 }}>✕</button>
+              </div>
+              {/* コンテンツ */}
+              <div style={{ overflowY: "auto", padding: "0 20px 32px" }}>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${COLORS.border}` }}>
+                  {h.purpose}
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>使い方</div>
+                  {h.usage.map((u, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: COLORS.accent, marginTop: 7, flexShrink: 0 }} />
+                      <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{u}</div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.psAccent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>ポイント</div>
+                  {h.points.map((p, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: COLORS.psAccent, marginTop: 7, flexShrink: 0 }} />
+                      <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>{p}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 削除確認ダイアログ */}
       {deleteTargetId && (
