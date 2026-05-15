@@ -777,6 +777,7 @@ export default function App() {
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
   const [graphMetric, setGraphMetric] = useState("mood"); // "mood" | "condition" | "sleep"
   const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
+  const [checkinListCount, setCheckinListCount] = useState(14);
   const [reportWeekOffset, setReportWeekOffset] = useState(0);
 
   const [achievements, setAchievements] = useState(loadAchievements);
@@ -3547,18 +3548,22 @@ export default function App() {
             })()}
 
             {/* 一覧タブ */}
-            {historyTab === "list" && (
-              <div key="list" className="page" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {periodCheckins.slice().reverse().map(({ date, data, label }) => {
-                  const isToday = date === toDateStr(t.year, t.month, t.day);
-                  return (
-                    <div key={date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${data ? COLORS.accentSoft : COLORS.border}`, opacity: data ? 1 : 0.4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ minWidth: 48 }}>
-                          <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
-                          {isToday && <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700 }}>今日</div>}
-                        </div>
-                        {data ? (
+            {historyTab === "list" && (() => {
+              const allCheckins = [...checkins].sort((a, b) => b.date.localeCompare(a.date));
+              const todayStr2 = toDateStr(t.year, t.month, t.day);
+              return (
+                <div key="list" className="page" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {allCheckins.slice(0, checkinListCount).map((data) => {
+                    const isToday = data.date === todayStr2;
+                    const [, dm, dd] = data.date.split("-");
+                    const label = `${parseInt(dm)}/${parseInt(dd)}`;
+                    return (
+                      <div key={data.date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${COLORS.accentSoft}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ minWidth: 48 }}>
+                            <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
+                            {isToday && <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700 }}>今日</div>}
+                          </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                               <div style={{ flex: 1, height: 6, borderRadius: 3, background: COLORS.border, overflow: "hidden" }}>
@@ -3572,15 +3577,22 @@ export default function App() {
                             </div>
                             {data.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4, lineHeight: 1.5 }}>「{data.memo}」</div>}
                           </div>
-                        ) : (
-                          <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                  {allCheckins.length === 0 && (
+                    <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>まだ記録がありません</div>
+                  )}
+                  {allCheckins.length > checkinListCount && (
+                    <button onClick={() => setCheckinListCount(checkinListCount + 14)}
+                      style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 4 }}>
+                      もっと見る（残り{allCheckins.length - checkinListCount}件）
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
