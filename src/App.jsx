@@ -809,6 +809,7 @@ export default function App() {
   const [records, setRecords] = useState(loadRecords);
   const [agreed, setAgreedState] = useState(hasAgreed);
   const [onboarded, setOnboardedState] = useState(hasOnboarded);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [onboardSlide, setOnboardSlide] = useState(0);
 
   const [newSituation, setNewSituation] = useState("");
@@ -1215,6 +1216,72 @@ export default function App() {
 
   const psRecord = records.find((r) => r.id === psId);
 
+  if (showPrivacy) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", boxSizing: "border-box" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        {/* ヘッダー */}
+        <div style={{ position: "sticky", top: 0, background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}`, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 10 }}>
+          <button onClick={() => setShowPrivacy(false)}
+            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 0, lineHeight: 1 }}>
+            <IconArrowLeft size={20} />
+          </button>
+          <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>プライバシーポリシー・免責事項</div>
+        </div>
+        {/* コンテンツ */}
+        <div style={{ padding: "24px 20px 60px" }}>
+          {/* プライバシーポリシー */}
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Privacy Policy</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>プライバシーポリシー</div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年5月</div>
+            {[
+              { title: "1. はじめに", body: "Stride（以下「本アプリ」）は、ユーザーのプライバシーを尊重し、個人情報の適切な取り扱いに努めます。" },
+              { title: "2. 収集する情報", body: "■ユーザーが入力する情報\n・気分・体調・睡眠に関する記録\n・ストレスや出来事に関するメモ\n・認知再構成・問題解決技法・コーピングに関する記録\n・クライシスプランの内容\n・その他、アプリ内で入力したすべての情報\n\n■自動的に収集される情報\n本アプリはGoogle Analyticsを使用しています。アクセス状況（ページビュー数・滞在時間など）を収集・分析しています。Googleのプライバシーポリシーが適用されます。" },
+              { title: "3. 情報の保存場所", body: "ユーザーが入力した情報は、ご利用のデバイスのブラウザ内（localStorage等）にのみ保存されます。開発者を含む第三者のサーバーには送信・保存されません。\n\n※ブラウザのデータを削除した場合、記録は復元できません。エクスポート機能でのバックアップを推奨します。" },
+              { title: "4. 情報の第三者提供", body: "本アプリは、ユーザーの情報を第三者に販売・提供・開示しません。\nただし、以下の外部サービスを利用しています：\n・Googleフォーム（フィードバック収集）：入力情報はGoogleのサービスを通じて処理されます\n・Google Analytics（アクセス解析）：Googleのプライバシーポリシーが適用されます" },
+              { title: "5. Cookie・ローカルストレージについて", body: "アプリの機能提供のためにlocalStorageを使用します。広告目的では使用しません。" },
+              { title: "6. プライバシーポリシーの変更", body: "本ポリシーは必要に応じて更新されます。重要な変更はアプリ内でお知らせします。" },
+              { title: "7. お問い合わせ", body: "アプリ内のフィードバックフォームよりご連絡ください。" },
+            ].map((s, i) => (
+              <div key={i} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>{s.title}</div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8, whiteSpace: "pre-line" }}>{s.body}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ height: 1, background: COLORS.border, marginBottom: 40 }} />
+
+          {/* 免責事項 */}
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Disclaimer</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>免責事項</div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年5月</div>
+            {[
+              { title: "1. 医療行為ではありません", body: "本アプリは、セルフマネジメントおよび自己理解を支援するためのツールです。医療行為、診断、治療、またはその代替を目的としたものではありません。精神的・身体的な健康上の問題については、必ず専門家にご相談ください。" },
+              { title: "2. 効果の保証はしません", body: "本アプリの利用によって、特定の効果・改善・結果が得られることを保証するものではありません。使用はユーザー自身の判断と責任において行ってください。" },
+              { title: "3. 緊急時の対応", body: "自傷・自殺念慮など、緊急性のある状態にある場合は、直ちに以下の相談窓口または医療機関にご連絡ください。\n・いのちの電話：0120-783-556\n・よりそいホットライン：0120-279-338\n・救急：119 / 警察：110" },
+              { title: "4. データの損失について", body: "データはブラウザ内に保存されます。ブラウザのデータ削除・端末の初期化・ブラウザの変更などによりデータが失われる場合があります。定期的なエクスポートを推奨します。開発者はデータ損失に関して責任を負いません。" },
+              { title: "5. サービスの変更・終了", body: "予告なくサービス内容の変更・停止・終了をする場合があります。これによってユーザーに生じた損害について、開発者は責任を負いません。" },
+              { title: "6. 免責事項の変更", body: "本免責事項は必要に応じて更新されます。最新の内容は本ページでご確認ください。" },
+            ].map((s, i) => (
+              <div key={i} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>{s.title}</div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8, whiteSpace: "pre-line" }}>{s.body}</div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => setShowPrivacy(false)}
+            style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: 14, cursor: "pointer" }}>
+            ← 戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!agreed) {
     return (
       <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px" }}>
@@ -1249,6 +1316,11 @@ export default function App() {
           </div>
         </div>
 
+        <button
+          onClick={() => setShowPrivacy(true)}
+          style={{ width: "100%", background: "none", border: "none", color: COLORS.textMuted, fontSize: 13, padding: "10px 0", cursor: "pointer", marginBottom: 8, textDecoration: "underline" }}>
+          プライバシーポリシー・免責事項を確認する
+        </button>
         <button
           onClick={() => { setAgreed(true); setAgreedState(true); }}
           style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 16, cursor: "pointer" }}>
@@ -2906,6 +2978,16 @@ export default function App() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div style={{ marginTop: 32 }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>法的情報</div>
+            <button
+              onClick={() => setShowPrivacy(true)}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", textAlign: "left" }}>
+              <span style={{ fontSize: 14, color: COLORS.text }}>プライバシーポリシー・免責事項</span>
+              <span style={{ fontSize: 16, color: COLORS.textMuted }}>›</span>
+            </button>
           </div>
 
           <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
