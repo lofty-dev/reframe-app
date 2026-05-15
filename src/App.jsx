@@ -3003,7 +3003,7 @@ export default function App() {
               バグの報告・機能のご要望・使い方のご質問など、お気軽にお送りください。いただいたフィードバックは今後の改善に活かします。
             </div>
             <button
-              onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSf-Ee2A58_L8EFZdhwPiTbGg_F6STH3-FymVPiGKeme-YVcaw/viewform", "_blank")}
+              onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSexa5H2X037mrCEGrOwcRil-VWOlz3byyCVcQmJ3cAqMKIy9g/viewform?usp=publish-editor", "_blank")}
               style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
               フォームを開く →
             </button>
