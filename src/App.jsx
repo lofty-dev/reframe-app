@@ -46,6 +46,13 @@ const CBT3_STEPS = [
     placeholder: "例）自分の意見は価値がないんだ、また同じことが起きる",
     hint: "出来事の直後に頭に浮かんだ言葉をそのまま書いてみよう。評価しなくていい。\nまず状況と感情と思考を書き出すことで、自分のパターンが見えてくるよ。",
   },
+  {
+    id: "cogPattern3",
+    label: "認知のクセ",
+    question: "この思考、どんな認知のクセだと思う？",
+    placeholder: "",
+    hint: "当てはまると思うものを選んでみよう。複数あってもOK。「これかも」くらいで大丈夫。選ばなくてもOK。",
+  },
 ];
 
 const CBT_STEPS = [
@@ -69,6 +76,13 @@ const CBT_STEPS = [
     question: "頭に浮かんだ考えを書き出そう",
     placeholder: "例）自分はダメな人間だ",
     hint: "出来事のあとに、瞬間的に頭に浮かんだ考えを一つずつ書いてみよう。\n「〜に違いない」「〜のせいだ」という形になることが多い。複数あってもOK。",
+  },
+  {
+    id: "cogPattern",
+    label: "認知のクセ",
+    question: "この思考、どんな認知のクセだと思う？",
+    placeholder: "",
+    hint: "当てはまると思うものを選んでみよう。複数あってもOK。「これかも」くらいで大丈夫。選ばなくてもOK。",
   },
   {
     id: "selectThought",
@@ -294,6 +308,21 @@ const AutoThoughtInput = ({ value, onChange }) => {
     </div>
   );
 };
+
+const STRESS_CATEGORIES = ["人間関係", "仕事・作業", "健康・体調", "お金", "将来・不安", "家族", "その他"];
+const STRESS_INTENSITIES = ["軽い", "中", "重い"];
+const COG_PATTERNS = [
+  { label: "白黒思考", desc: "物事を0か100かで考えてしまう" },
+  { label: "べき思考", desc: "〜すべき・〜しなければと強く思い込む" },
+  { label: "心の読みすぎ", desc: "相手の気持ちを根拠なく決めつける" },
+  { label: "先読みの誤り", desc: "悪い結果を根拠なく予測する" },
+  { label: "感情的決めつけ", desc: "気分や感情を事実として捉える" },
+  { label: "過度の一般化", desc: "一度の出来事を全てに当てはめる" },
+  { label: "拡大解釈", desc: "失敗や欠点を必要以上に大きく捉える" },
+  { label: "縮小解釈", desc: "良いことを必要以上に小さく捉える" },
+  { label: "自己関連付け", desc: "関係ないことを自分のせいにする" },
+  { label: "その他", desc: "" },
+];
 
 const PS_STEPS = [
   {
@@ -746,6 +775,15 @@ export default function App() {
   const [psReviewId, setPsReviewId] = useState(null);
   const [psReviewDraft, setPsReviewDraft] = useState({ result: "", insight: "" });
 
+  const [newCategory, setNewCategory] = useState(null);
+  const [newIntensity, setNewIntensity] = useState(null);
+  const [newFirstThought, setNewFirstThought] = useState("");
+
+  const [copingReviewId, setCopingReviewId] = useState(null);
+  const [copingReviewResult, setCopingReviewResult] = useState(null);
+  const [copingPracticeId, setCopingPracticeId] = useState(null);
+  const [copingPracticeResult, setCopingPracticeResult] = useState(null);
+
   const [detailId, setDetailId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -897,8 +935,11 @@ export default function App() {
 
   const saveNew = () => {
     if (!newSituation.trim()) return;
-    setRecords([{ id: Date.now(), date: toDateStr(newYear, newMonth, newDay), situation: newSituation, completed: false, cbt: {} }, ...records]);
+    setRecords([{ id: Date.now(), date: toDateStr(newYear, newMonth, newDay), situation: newSituation, category: newCategory, intensity: newIntensity, firstThought: newFirstThought.trim() || null, completed: false, cbt: {} }, ...records]);
     setNewSituation("");
+    setNewCategory(null);
+    setNewIntensity(null);
+    setNewFirstThought("");
     const t2 = todayStr();
     setNewYear(t2.year); setNewMonth(t2.month); setNewDay(t2.day);
     setVisibleCount(10);
@@ -1006,9 +1047,29 @@ export default function App() {
   };
 
   const confirmCoping = (coping) => {
-    setRecords(records.map((r) => r.id === copingSelectId ? { ...r, completed: true, coping } : r));
+    setRecords(records.map((r) => r.id === copingSelectId ? { ...r, coping, copingStatus: "pending" } : r));
     setCopingConfirm(null);
     setView("list");
+  };
+
+  const startCopingReview = (id) => {
+    setCopingReviewId(id);
+    setCopingReviewResult(null);
+    setView("copingReview");
+  };
+
+  const saveCopingReview = () => {
+    if (!copingReviewResult) return;
+    setRecords(prev => prev.map(r => r.id === copingReviewId ? { ...r, copingStatus: "done", copingReview: copingReviewResult } : r));
+    setView("list");
+  };
+
+  const practiceCoping = (copingId, result) => {
+    setCopings(prev => prev.map(c => c.id === copingId
+      ? { ...c, practices: [...(c.practices || []), { id: Date.now(), date: toDateStr(t.year, t.month, t.day), result }] }
+      : c));
+    setCopingPracticeId(null);
+    setCopingPracticeResult(null);
   };
 
   const addCrisisItem = (type, text, text2 = "") => {
@@ -2818,6 +2879,12 @@ export default function App() {
                   </button>
                   <div style={{ flex: 1, cursor: "pointer" }} onClick={() => { setDetailId(rec.id); setEditing(false); setView("detail"); }}>
                     <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{formatDate(rec.date)}</div>
+                    {(rec.category || rec.intensity) && (
+                      <div style={{ display: "flex", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+                        {rec.category && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: COLORS.accentSoft, color: COLORS.accentText }}>{rec.category}</span>}
+                        {rec.intensity && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: COLORS.surface, border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}>{rec.intensity}</span>}
+                      </div>
+                    )}
                     <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: rec.completed ? COLORS.textMuted : COLORS.text, textDecoration: rec.completed ? "line-through" : "none" }}>
                       {rec.situation}
                     </div>
@@ -2827,20 +2894,41 @@ export default function App() {
                     style={{ flexShrink: 0, marginTop: 2, background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}
                   >×</button>
                 </div>
-                {rec.ps?.status === "planned" ? (
-                  <button onClick={() => startPsReview(rec.id)}
-                    style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-                    🕐 振り返りを記録する
-                  </button>
-                ) : rec.ps?.status === "done" ? (
-                  <div style={{ marginTop: 8, fontSize: 12, color: COLORS.accent, display: "flex", alignItems: "center", gap: 4 }}>✓ 振り返り完了</div>
-                ) : !rec.completed ? (
-                  <button onClick={() => startApproach(rec.id)} style={{ marginTop: 12, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-                    {(rec.cbt && Object.keys(rec.cbt).length > 0) || (rec.ps && Object.keys(rec.ps).length > 0)
-                      ? "続きから →"
-                      : "アプローチを選ぶ →"}
-                  </button>
-                ) : null}
+                {(() => {
+                  const hasCopingPending = rec.copingStatus === "pending";
+                  const hasCopingDone = rec.copingStatus === "done";
+                  const hasPsPlanned = rec.ps?.status === "planned";
+                  const hasPsDone = rec.ps?.status === "done";
+                  const hasAnyApproach = (rec.cbt && Object.keys(rec.cbt).length > 0) || (rec.ps && Object.keys(rec.ps).length > 0) || rec.copingStatus;
+                  const showApproach = !rec.completed && !hasCopingPending && !hasPsPlanned;
+                  return (
+                    <div>
+                      {hasCopingPending && (
+                        <button onClick={() => startCopingReview(rec.id)}
+                          style={{ marginTop: 10, width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 8, color: "#e0a855", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                          🕐 コーピングの効果を記録する
+                        </button>
+                      )}
+                      {hasCopingDone && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: "#e0a855", display: "flex", alignItems: "center", gap: 4 }}>✓ コーピング：{rec.copingReview}</div>
+                      )}
+                      {hasPsPlanned && (
+                        <button onClick={() => startPsReview(rec.id)}
+                          style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                          🕐 振り返りを記録する
+                        </button>
+                      )}
+                      {hasPsDone && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: COLORS.accent, display: "flex", alignItems: "center", gap: 4 }}>✓ 振り返り完了</div>
+                      )}
+                      {showApproach && (
+                        <button onClick={() => startApproach(rec.id)} style={{ marginTop: 12, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                          {hasAnyApproach ? "続きから →" : "アプローチを選ぶ →"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -2879,12 +2967,26 @@ export default function App() {
             <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだコーピングがないよ<br />上のボタンから追加してみて</div>
           )}
 
+          {(() => {
+            const pendingCopingReviews = records.filter(r => r.copingStatus === "pending").length;
+            return pendingCopingReviews > 0 ? (
+              <button onClick={() => setView("list")}
+                style={{ width: "100%", background: "#e0a85515", border: `1px solid #e0a85540`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, cursor: "pointer", textAlign: "left", display: "block" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#e0a855" }}>🕐 振り返りが{pendingCopingReviews}件あります</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>ストレス記録に戻って効果を記録しよう</div>
+              </button>
+            ) : null;
+          })()}
+
           <div key={copingSort} className="page" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {sortedCopings.map((c) => (
-              <div key={c.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
+              <div key={c.id} id={`coping-${c.id}`} style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ flex: 1, fontSize: 15, lineHeight: 1.6, color: COLORS.text }}>{c.text}</div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                    {!(c.practices?.length) && (
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "#e0a85520", border: `1px solid #e0a85540`, color: "#e0a855", whiteSpace: "nowrap" }}>振り返りがまだ</span>
+                    )}
                     <button onClick={() => { setCopingEditId(c.id); setCopingEditText(c.text); setCopingEditDifficulty(c.difficulty); setCopingEditEffect(c.effect); }}
                       style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
                     <button onClick={() => setCopingDeleteId(c.id)} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", opacity: 0.5 }}>×</button>
@@ -2900,9 +3002,46 @@ export default function App() {
                     <span style={{ color: COLORS.border }}> / 5</span>
                   </div>
                 </div>
+                {c.practices?.length > 0 && (
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {c.practices.slice(-3).map(p => (
+                      <span key={p.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: COLORS.bg, border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}>{p.date} {p.result}</span>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
+                  style={{ marginTop: 10, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                  実践する
+                </button>
               </div>
             ))}
           </div>
+
+          {/* 実践モーダル */}
+          {copingPracticeId && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+              <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>どうだった？</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                  {["よかった", "普通", "あまり効かなかった"].map(r => (
+                    <button key={r} onClick={() => setCopingPracticeResult(r)}
+                      style={{ padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${copingPracticeResult === r ? COLORS.accent : COLORS.border}`, background: copingPracticeResult === r ? COLORS.accentSoft : COLORS.bg, color: copingPracticeResult === r ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: copingPracticeResult === r ? 700 : 400, cursor: "pointer" }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => { setCopingPracticeId(null); setCopingPracticeResult(null); }}
+                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+                  <button onClick={() => practiceCoping(copingPracticeId, copingPracticeResult)}
+                    disabled={!copingPracticeResult}
+                    style={{ flex: 2, background: copingPracticeResult ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingPracticeResult ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: copingPracticeResult ? "pointer" : "default" }}>
+                    記録する
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* コーピング削除確認 */}
           {copingDeleteId && (
@@ -3668,9 +3807,35 @@ export default function App() {
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
             <DateSelector year={newYear} month={newMonth} day={newDay} onYear={setNewYear} onMonth={setNewMonth} onDay={setNewDay} />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>何があった？</div>
-            <textarea rows={5} style={inp} placeholder="例）上司に仕事のやり方を批判された" value={newSituation} onChange={(e) => setNewSituation(e.target.value)} />
+            <textarea rows={4} style={inp} placeholder="例）上司に仕事のやり方を批判された" value={newSituation} onChange={(e) => setNewSituation(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>カテゴリ <span style={{ fontSize: 11 }}>任意</span></div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {STRESS_CATEGORIES.map(c => (
+                <button key={c} onClick={() => setNewCategory(newCategory === c ? null : c)}
+                  style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${newCategory === c ? COLORS.accent : COLORS.border}`, background: newCategory === c ? COLORS.accentSoft : COLORS.surface, color: newCategory === c ? COLORS.accentText : COLORS.textMuted, fontSize: 13, fontWeight: newCategory === c ? 700 : 400, cursor: "pointer" }}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>強度 <span style={{ fontSize: 11 }}>任意</span></div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {STRESS_INTENSITIES.map(v => (
+                <button key={v} onClick={() => setNewIntensity(newIntensity === v ? null : v)}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${newIntensity === v ? COLORS.accent : COLORS.border}`, background: newIntensity === v ? COLORS.accentSoft : COLORS.surface, color: newIntensity === v ? COLORS.accentText : COLORS.textMuted, fontSize: 13, fontWeight: newIntensity === v ? 700 : 400, cursor: "pointer" }}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>浮かんだ考え <span style={{ fontSize: 11 }}>任意</span></div>
+            <input type="text" style={{ width: "100%", background: "#151929", border: "1px solid #2a2d3e", borderRadius: 10, color: "#e8eaf0", fontSize: 15, padding: "12px 14px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} placeholder="例）また失敗した、どうせダメだ" value={newFirstThought} onChange={(e) => setNewFirstThought(e.target.value)} />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
@@ -3683,7 +3848,21 @@ export default function App() {
       {view === "detail" && selectedDetail && !editing && (
         <div className="page" style={{ padding: "20px 16px" }}>
           <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>{formatDate(selectedDetail.date)}</div>
-          <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", fontSize: 16, fontWeight: 600, lineHeight: 1.6, marginBottom: 24, border: `1px solid ${COLORS.border}` }}>{selectedDetail.situation}</div>
+          <div style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", fontSize: 16, fontWeight: 600, lineHeight: 1.6, marginBottom: (selectedDetail.category || selectedDetail.intensity || selectedDetail.firstThought) ? 12 : 24, border: `1px solid ${COLORS.border}` }}>{selectedDetail.situation}</div>
+
+          {(selectedDetail.category || selectedDetail.intensity || selectedDetail.firstThought) && (
+            <div style={{ marginBottom: 24 }}>
+              {(selectedDetail.category || selectedDetail.intensity) && (
+                <div style={{ display: "flex", gap: 8, marginBottom: selectedDetail.firstThought ? 8 : 0, flexWrap: "wrap" }}>
+                  {selectedDetail.category && <span style={{ fontSize: 13, padding: "4px 12px", borderRadius: 16, background: COLORS.accentSoft, color: COLORS.accentText, border: `1px solid ${COLORS.border}` }}>{selectedDetail.category}</span>}
+                  {selectedDetail.intensity && <span style={{ fontSize: 13, padding: "4px 12px", borderRadius: 16, background: COLORS.surface, color: COLORS.textMuted, border: `1px solid ${COLORS.border}` }}>{selectedDetail.intensity}</span>}
+                </div>
+              )}
+              {selectedDetail.firstThought && (
+                <div style={{ fontSize: 13, color: COLORS.textMuted, fontStyle: "italic", lineHeight: 1.6 }}>「{selectedDetail.firstThought}」</div>
+              )}
+            </div>
+          )}
 
           {/* コーピング記録 */}
           {selectedDetail.coping && (
@@ -3692,6 +3871,9 @@ export default function App() {
               <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid #e0a85530`, color: COLORS.text }}>
                 {selectedDetail.coping}
               </div>
+              {selectedDetail.copingReview && (
+                <div style={{ marginTop: 8, fontSize: 13, color: "#e0a855", display: "flex", alignItems: "center", gap: 4 }}>効果：{selectedDetail.copingReview}</div>
+              )}
             </div>
           )}
 
@@ -3703,14 +3885,20 @@ export default function App() {
                 <div key={step.id} style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{step.label}</div>
                   <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>
-                    {step.id === "autoThought" || step.id === "autoThought3"
+                    {(step.id === "autoThought" || step.id === "autoThought3")
                       ? selectedDetail.cbt[step.id].split("\n").filter(s => s.trim()).map((t, i) => (
                           <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < selectedDetail.cbt[step.id].split("\n").filter(s => s.trim()).length - 1 ? 8 : 0 }}>
                             <span style={{ color: COLORS.textMuted, minWidth: 16 }}>{i + 1}</span>
                             <span>{t}</span>
                           </div>
                         ))
-                      : selectedDetail.cbt[step.id]
+                      : (step.id === "cogPattern" || step.id === "cogPattern3")
+                        ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {selectedDetail.cbt[step.id].split(",").filter(s => s.trim()).map((p, i) => (
+                              <span key={i} style={{ padding: "3px 10px", borderRadius: 14, background: COLORS.accentSoft, border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.accentText }}>{p}</span>
+                            ))}
+                          </div>
+                        : selectedDetail.cbt[step.id]
                     }
                   </div>
                 </div>
@@ -4165,6 +4353,44 @@ export default function App() {
         );
       })()}
 
+      {/* コーピング振り返り */}
+      {view === "copingReview" && (() => {
+        const rec = records.find(r => r.id === copingReviewId);
+        if (!rec) return null;
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+              コーピング — 効果の記録
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>
+              どうだった？
+            </div>
+            <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+              📌 {rec.situation}
+            </div>
+            <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#e0a855", marginBottom: 24, border: `1px solid #e0a85530` }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>試したコーピング</div>
+              {rec.coping}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+              {["よかった", "普通", "あまり効かなかった"].map(r => (
+                <button key={r} onClick={() => setCopingReviewResult(r)}
+                  style={{ padding: "14px 16px", borderRadius: 10, border: `1.5px solid ${copingReviewResult === r ? "#e0a855" : COLORS.border}`, background: copingReviewResult === r ? "#e0a85520" : COLORS.surface, color: copingReviewResult === r ? "#e0a855" : COLORS.text, fontSize: 15, fontWeight: copingReviewResult === r ? 700 : 400, cursor: "pointer" }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <button onClick={saveCopingReview} disabled={!copingReviewResult}
+              style={{ width: "100%", background: copingReviewResult ? "#e0a855" : COLORS.border, border: "none", borderRadius: 10, color: copingReviewResult ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: copingReviewResult ? "pointer" : "default", marginBottom: 10 }}>
+              ✓ 記録する
+            </button>
+            <button onClick={() => setView("list")} style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
+              キャンセル
+            </button>
+          </div>
+        );
+      })()}
+
       {view === "cbt" && cbtRecord && (() => {
         const steps = cbtMode === "3" ? CBT3_STEPS : CBT_STEPS;
         const currentStep = steps[cbtStep];
@@ -4193,6 +4419,23 @@ export default function App() {
               value={cbtDraft[currentStep.id] || ""}
               onChange={(val) => setCbtDraft({ ...cbtDraft, [currentStep.id]: val })}
             />
+          ) : (currentStep.id === "cogPattern" || currentStep.id === "cogPattern3") ? (
+            <div>
+              {COG_PATTERNS.map(p => {
+                const patterns = (cbtDraft[currentStep.id] || "").split(",").filter(s => s.trim());
+                const isSelected = patterns.includes(p.label);
+                return (
+                  <button key={p.label} onClick={() => {
+                    const next = isSelected ? patterns.filter(x => x !== p.label) : [...patterns, p.label];
+                    setCbtDraft({ ...cbtDraft, [currentStep.id]: next.join(",") });
+                  }}
+                    style={{ width: "100%", textAlign: "left", padding: "12px 16px", marginBottom: 8, borderRadius: 10, border: `1.5px solid ${isSelected ? COLORS.accent : COLORS.border}`, background: isSelected ? COLORS.accentSoft : COLORS.surface, cursor: "pointer", fontFamily: "inherit", display: "block" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? COLORS.accent : COLORS.text, marginBottom: p.desc ? 2 : 0 }}>{p.label}</div>
+                    {p.desc && <div style={{ fontSize: 12, color: COLORS.textMuted }}>{p.desc}</div>}
+                  </button>
+                );
+              })}
+            </div>
           ) : currentStep.id === "selectThought" ? (
             <div>
               {(cbtDraft["autoThought"] || "").split("\n").filter(s => s.trim()).map((thought, idx) => (
