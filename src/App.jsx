@@ -757,7 +757,8 @@ export default function App() {
   const [cbtDraft, setCbtDraft] = useState({});
   const [showHint, setShowHint] = useState(false);
   const [cbtMode, setCbtMode] = useState("7");
-  const [selectedThought, setSelectedThought] = useState(""); // "3" or "7"
+  const [selectedThought, setSelectedThought] = useState("");
+  const [pendingThought, setPendingThought] = useState(null);
 
   const [psId, setPsId] = useState(null);
   const [psStep, setPsStep] = useState(0);
@@ -975,6 +976,8 @@ export default function App() {
     setCbtMode("3");
     setCbtStep(0);
     setShowHint(false);
+    setSelectedThought("");
+    setPendingThought(null);
     setView("cbt");
   };
 
@@ -982,6 +985,8 @@ export default function App() {
     setCbtMode("7");
     setCbtStep(0);
     setShowHint(false);
+    setSelectedThought("");
+    setPendingThought(null);
     setView("cbt");
   };
 
@@ -4401,7 +4406,7 @@ export default function App() {
             const sid = currentStep.id;
             const autoThoughts = (cbtDraft["autoThought"] || cbtDraft["autoThought3"] || "").split("\n").filter(s => s.trim());
             const effectiveThought = selectedThought || (autoThoughts.length === 1 ? autoThoughts[0] : null);
-            const inThoughtSelect = sid === "evidence_for" && !effectiveThought && autoThoughts.length > 0;
+            const inThoughtSelect = sid === "evidence_for" && !selectedThought && autoThoughts.length > 1;
             const displayQuestion = inThoughtSelect ? "根拠・反証を検証したい自動思考を一つ選ぼう" : currentStep.question;
             const situation = cbtDraft["situation7"] || cbtDraft["situation3"] || cbtRecord.situation;
 
@@ -4494,8 +4499,8 @@ export default function App() {
                 ) : inThoughtSelect ? (
                   <div>
                     {autoThoughts.map((thought, idx) => (
-                      <button key={idx} onClick={() => setSelectedThought(thought)}
-                        style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 10, border: `2px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
+                      <button key={idx} onClick={() => setPendingThought(thought)}
+                        style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 10, border: `2px solid ${pendingThought === thought ? COLORS.accent : COLORS.border}`, background: pendingThought === thought ? COLORS.accentSoft : COLORS.surface, color: pendingThought === thought ? COLORS.accent : COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
                         {thought}
                       </button>
                     ))}
@@ -4520,6 +4525,7 @@ export default function App() {
                       if (inThoughtSelect) {
                         const atIdx = steps.findIndex(s => s.id === "autoThought" || s.id === "autoThought3");
                         setCbtStep(atIdx >= 0 ? atIdx : cbtStep - 1);
+                        setPendingThought(null);
                       } else {
                         setCbtStep(cbtStep - 1);
                       }
@@ -4527,9 +4533,20 @@ export default function App() {
                     }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
                   )}
                   <button
-                    onClick={() => { if (cbtStep < steps.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
-                    disabled={inThoughtSelect}
-                    style={{ flex: 2, background: inThoughtSelect ? COLORS.border : cbtStep === steps.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: inThoughtSelect ? COLORS.textMuted : "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: inThoughtSelect ? "default" : "pointer" }}
+                    onClick={() => {
+                      if (inThoughtSelect) {
+                        setSelectedThought(pendingThought);
+                        setCbtStep(cbtStep + 1);
+                        setShowHint(false);
+                      } else if (cbtStep < steps.length - 1) {
+                        setCbtStep(cbtStep + 1);
+                        setShowHint(false);
+                      } else {
+                        finishCBT();
+                      }
+                    }}
+                    disabled={inThoughtSelect && !pendingThought}
+                    style={{ flex: 2, background: (inThoughtSelect && !pendingThought) ? COLORS.border : cbtStep === steps.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: (inThoughtSelect && !pendingThought) ? COLORS.textMuted : "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: (inThoughtSelect && !pendingThought) ? "default" : "pointer" }}
                   >
                     {cbtStep === steps.length - 1 ? "✓ 完了する" : "次へ →"}
                   </button>
