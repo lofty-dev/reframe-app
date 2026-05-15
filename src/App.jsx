@@ -3931,6 +3931,13 @@ export default function App() {
           setShowHint(false);
         };
 
+        const stepId = PS_STEPS[psStep].id;
+        const pinText = stepId === "situation" ? psRecord.situation
+          : stepId === "breakdown" || stepId === "target" ? (psDraft.situation || psRecord.situation)
+          : stepId === "benefit" || stepId === "solutions" || stepId === "selectPlan" ? (psDraft.target || psRecord.situation)
+          : stepId === "planWhen" ? (psDraft.selectPlan || psDraft.target || psRecord.situation)
+          : psRecord.situation;
+
         return (
           <div className="page" style={{ padding: "20px 16px" }}>
             <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
@@ -3943,7 +3950,7 @@ export default function App() {
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{PS_STEPS[psStep].question}</div>
             <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
-              📌 {psRecord.situation}
+              📌 {pinText}
             </div>
 
             {isBreakdownStep ? (
@@ -4028,12 +4035,6 @@ export default function App() {
               </div>
             ) : isPlanWhenStep ? (
               <div>
-                {psDraft.selectPlan && (
-                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#818cf8", marginBottom: 16, border: `1px solid #818cf830` }}>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>選んだ解決策</div>
-                    {psDraft.selectPlan}
-                  </div>
-                )}
                 <textarea
                   rows={4}
                   style={inp}
