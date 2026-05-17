@@ -969,13 +969,20 @@ export default function App() {
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
 
+    // 印刷ボタンをHTML内に埋め込む（同フレーム内のユーザー操作でprint()を呼ぶことで自動印刷ブロックを回避）
+    const printBar = '<div class="__pb" style="position:sticky;top:0;background:#f8f9fa;padding:10px 16px;border-bottom:1px solid #dee2e6;display:flex;align-items:center;justify-content:space-between;">'
+      + '<span style="font-size:13px;color:#555;font-family:sans-serif;">印刷プレビュー</span>'
+      + '<button onclick="window.print()" style="background:#111;color:#fff;border:none;padding:8px 20px;border-radius:20px;font-size:13px;cursor:pointer;font-family:sans-serif;">🖨️ 印刷・PDF保存</button>'
+      + '</div>'
+      + '<style>@media print{.__pb{display:none!important}}</style>';
+    const htmlWithBar = html.replace('<body>', '<body>' + printBar);
+
     if (!isPWA) {
       const w = window.open('', '_blank');
       if (!w) return;
-      w.document.write(html);
+      w.document.write(htmlWithBar);
       w.document.close();
       w.focus();
-      setTimeout(() => { w.print(); }, 400);
       return;
     }
 
@@ -984,11 +991,7 @@ export default function App() {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;';
 
     const bar = document.createElement('div');
-    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;';
-
-    const printBtn = document.createElement('button');
-    printBtn.textContent = '🖨️ 印刷・PDF保存';
-    printBtn.style.cssText = 'background:#111;color:#fff;border:none;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;font-family:sans-serif;';
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;padding:10px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;';
 
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '← 戻る';
@@ -999,21 +1002,17 @@ export default function App() {
 
     const remove = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
     closeBtn.onclick = remove;
-    printBtn.onclick = () => { try { iframe.contentWindow.print(); } catch (e) {} };
 
-    bar.appendChild(printBtn);
     bar.appendChild(closeBtn);
     overlay.appendChild(bar);
     overlay.appendChild(iframe);
     document.body.appendChild(overlay);
 
     iframe.contentDocument.open();
-    iframe.contentDocument.write(html);
+    iframe.contentDocument.write(htmlWithBar);
     iframe.contentDocument.close();
 
     if (iframe.contentWindow) iframe.contentWindow.onafterprint = remove;
-
-    setTimeout(() => { try { iframe.contentWindow.print(); } catch (e) {} }, 400);
   };
 
   const handleCrisisPrint = () => {
