@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -566,10 +566,7 @@ const loadRecords = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  return [
-    { id: 1, date: "2026-05-07", situation: "友達にLINEを既読無視された", completed: true, cbt: { emotion: "不安 70%、悲しみ 50%", autoThought: "嫌われたのかもしれない", evidence_for: "最近会っていない", evidence_against: "相手が忙しいだけかも", balanced: "忙しくて返せていないだけかもしれない", reEmotion: "不安 30%" } },
-    { id: 2, date: "2026-05-09", situation: "上司に仕事のやり方を批判された", completed: false, cbt: {} },
-  ];
+  return [];
 };
 
 const saveRecords = (records) => {
@@ -920,6 +917,7 @@ export default function App() {
   const dndSensors = useSensors(useSensor(PointerSensor));
 
   const [visibleCount, setVisibleCount] = useState(10);
+  const [recordSort, setRecordSort] = useState("newest");
 
   const [mfMinutes, setMfMinutes] = useState(5);
   const [mfRunning, setMfRunning] = useState(false);
@@ -964,6 +962,7 @@ export default function App() {
   useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
+  useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); } }, [showPrivacy]);
 
   const printHtml = (html) => {
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
@@ -991,7 +990,7 @@ export default function App() {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;';
 
     const bar = document.createElement('div');
-    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;padding:10px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;';
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;padding:10px 14px;padding-top:max(30px,env(safe-area-inset-top));border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;';
 
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '← 戻る';
@@ -1562,6 +1561,7 @@ export default function App() {
               else if (view === "copingSelect") { setView("approach"); }
               else if (view === "cbtSelect") { setView("approach"); }
               else if (view === "cbt") { setView("cbtSelect"); }
+              else if (view === "ps") { setView("approach"); }
               else { setView("list"); setEditing(false); }
             }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}><IconArrowLeft size={20} /></button>
           )}
@@ -1703,7 +1703,7 @@ export default function App() {
                     style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 11, cursor: "pointer", padding: 0 }}>詳細 →</button>
                 </div>
                 {!hasData ? (
-                  <div style={{ fontSize: 12, color: COLORS.textMuted, textAlign: "center", padding: "16px 0" }}>まだ記録がないよ</div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, textAlign: "center", padding: "16px 0" }}>まだ記録がありません</div>
                 ) : (
                   <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 60 }}>
                     {last7.map((d, i) => {
@@ -2186,10 +2186,16 @@ export default function App() {
                     <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                         <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
-                        <button onClick={(e) => { e.stopPropagation(); setTellEditId(m.id); setTellEditContent(m.content); setTellEditPersonIds([...m.personIds]); setView("tellMemoEdit"); }}
-                          style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer" }}>
-                          編集
-                        </button>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={(e) => { e.stopPropagation(); setTellEditId(m.id); setTellEditContent(m.content); setTellEditPersonIds([...m.personIds]); setView("tellMemoEdit"); }}
+                            style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer" }}>
+                            編集
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setTellMemoDeleteId(m.id); }}
+                            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}>
+                            ×
+                          </button>
+                        </div>
                       </div>
                       <div onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
                         style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: "pointer" }}>{m.content}</div>
@@ -2221,13 +2227,19 @@ export default function App() {
                 tellMemos.filter(m => m.completed).map(m => {
                   const people = m.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
                   return (
-                    <div key={m.id} onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
-                      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", opacity: 0.7 }}>
+                    <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, opacity: 0.85 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                         <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
-                        <span style={{ fontSize: 11, color: COLORS.success, fontWeight: 600, background: COLORS.successBg, borderRadius: 8, padding: "2px 8px" }}>✓ 完了</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: COLORS.success, fontWeight: 600, background: COLORS.successBg, borderRadius: 8, padding: "2px 8px" }}>✓ 完了</span>
+                          <button onClick={(e) => { e.stopPropagation(); setTellMemoDeleteId(m.id); }}
+                            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}>
+                            ×
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                      <div onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
+                        style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: "pointer" }}>{m.content}</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {people.map(p => (
                           <span key={p.id} style={{ background: "#818cf820", border: "1px solid #818cf840", color: "#818cf8", borderRadius: 8, padding: "2px 8px", fontSize: 12 }}>
@@ -2404,6 +2416,7 @@ export default function App() {
               style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
               このメモを削除
             </button>
+            <BottomNav onBack={() => setView("tellMemos")} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -2535,7 +2548,7 @@ export default function App() {
                 <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 10 }}>今日の記録</div>
                 {todayAchievements.length === 0 ? (
                   <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "32px 0", lineHeight: 2 }}>
-                    まだ今日の記録がないよ<br />小さなことでも書いてみよう
+                    まだ今日の記録がありません。<br />小さなことでも記録してみましょう
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2804,7 +2817,9 @@ export default function App() {
 
           {!mfRunning && mfRemaining === 0 && (
             <>
-              <div style={{ fontSize: 64, marginBottom: 20 }}>🔔</div>
+              <div style={{ width: 80, height: 80, borderRadius: 24, background: "#818cf820", border: "1.5px solid #818cf840", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                <IconBell size={48} color="#818cf8" />
+              </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>お疲れ様でした</div>
               <div style={{ fontSize: 14, color: COLORS.textMuted, textAlign: "center", lineHeight: 1.8, marginBottom: 40 }}>
                 {mfMinutes}分間の瞑想が完了しました
@@ -2871,7 +2886,13 @@ export default function App() {
                       const check = m.checks[currentPersonId] || { checked: false, reply: "" };
                       return (
                         <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 14 }}>
-                          <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 10 }}>{m.date}</div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                            <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
+                            <button onClick={() => setTellMemoDeleteId(m.id)}
+                              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}>
+                              ×
+                            </button>
+                          </div>
                           <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>伝えたこと</div>
                           <div style={{ fontSize: 14, color: COLORS.text, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7, marginBottom: 14, paddingLeft: 2 }}>{m.content}</div>
                           <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>言われたこと</div>
@@ -2972,7 +2993,7 @@ export default function App() {
               <IconPlus size={16} />新しいメモを作成
             </button>
             {memos.length === 0 ? (
-              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "40px 0", lineHeight: 2 }}>まだメモがないよ</div>
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "40px 0", lineHeight: 2 }}>まだメモがありません</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {memos.map(m => (
@@ -3224,14 +3245,36 @@ export default function App() {
       {/* LIST */}
       {view === "list" && (
         <div className="page" style={{ padding: "20px 16px" }}>
-          <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IconPlus size={18} />ストレスを記録する
           </button>
+          <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+            {[
+              { v: "newest", label: "新しい順" },
+              { v: "oldest", label: "古い順" },
+              { v: "incomplete", label: "未完了優先" },
+              { v: "complete", label: "完了優先" },
+            ].map(({ v, label }) => (
+              <button key={v} onClick={() => setRecordSort(v)}
+                style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 20, border: `1px solid ${recordSort === v ? COLORS.accent : COLORS.border}`, background: recordSort === v ? COLORS.accentSoft : "none", color: recordSort === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {label}
+              </button>
+            ))}
+          </div>
           {records.length === 0 && (
-            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだ記録がないよ<br />上のボタンから追加してみて</div>
+            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだ記録がありません。<br />上のボタンから追加できます</div>
           )}
+          {(() => {
+            const sortedRecords = [...records].sort((a, b) => {
+              if (recordSort === "newest") return b.date.localeCompare(a.date);
+              if (recordSort === "oldest") return a.date.localeCompare(b.date);
+              if (recordSort === "incomplete") return (a.completed ? 1 : 0) - (b.completed ? 1 : 0);
+              if (recordSort === "complete") return (b.completed ? 1 : 0) - (a.completed ? 1 : 0);
+              return 0;
+            });
+            return (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {records.slice(0, visibleCount).map((rec) => (
+            {sortedRecords.slice(0, visibleCount).map((rec) => (
               <div key={rec.id} style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", border: `1px solid ${COLORS.border}`, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <button
@@ -3299,6 +3342,8 @@ export default function App() {
               </div>
             ))}
           </div>
+            );
+          })()}
           {records.length > visibleCount && (
             <button onClick={() => setVisibleCount(visibleCount + 10)}
               style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 10 }}>
@@ -3331,7 +3376,7 @@ export default function App() {
           )}
 
           {copings.length === 0 && (
-            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだコーピングがないよ<br />上のボタンから追加してみて</div>
+            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだコーピングが登録されていません。<br />上のボタンから追加できます</div>
           )}
 
           {(() => {
@@ -3706,7 +3751,7 @@ export default function App() {
 
           <button className="no-print" onClick={handleCrisisPrint}
             style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            📄 PDFとして保存する
+            <IconDownload size={16} />PDFとして保存する
           </button>
 
           <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
@@ -3818,7 +3863,8 @@ export default function App() {
         const topEmotions = Object.entries(emotionMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
         const hasData = periodCheckins.some(c => c.data);
-        const W = 340, H = 140, PAD = 24;
+        const W = 340, H = 140, YPAD = 20, CHART_L = 28, CHART_R = 28;
+        const CHART_W = W - CHART_L - CHART_R;
 
         const conditionScore = (c) => c === "とても良い" ? 5 : c === "良い" ? 4 : c === "普通" ? 3 : c === "悪い" ? 2 : c === "とても悪い" ? 1 : null;
         const sleepScore = (s) => s === "4時間未満" ? 1 : s === "4〜6時間" ? 2 : s === "6〜8時間" ? 3 : s === "8時間以上" ? 4 : null;
@@ -3834,12 +3880,13 @@ export default function App() {
           return sleepScore(data.sleep);
         };
         const metricMax = graphMetric === "mood" ? 10 : graphMetric === "condition" ? 5 : 4;
+        const barW = Math.max(4, CHART_W / graphPeriod * 0.6);
 
         const dataPoints = periodCheckins.map((c, i) => {
           const val = getMetricValue(c.data, graphMetric);
           return {
-            x: PAD + (i / Math.max(graphPeriod - 1, 1)) * (W - PAD * 2),
-            y: val !== null ? H - PAD - ((val - 1) / (metricMax - 1)) * (H - PAD * 2) : null,
+            x: CHART_L + barW / 2 + (i / Math.max(graphPeriod - 1, 1)) * (CHART_W - barW),
+            y: val !== null ? H - YPAD - ((val - 1) / (metricMax - 1)) * (H - YPAD * 2) : null,
             val,
             label: c.label,
           };
@@ -3883,20 +3930,22 @@ export default function App() {
                     <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>まだ記録がありません</div>
                   ) : (
                     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", overflow: "visible" }}>
+                      {/* グリッド線（背面） */}
                       {Array.from({ length: metricMax }, (_, i) => i + 1).map(v => {
-                        const y = H - PAD - ((v - 1) / (metricMax - 1)) * (H - PAD * 2);
-                        return (
-                          <g key={v}>
-                            <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke={COLORS.border} strokeWidth="0.5" />
-                            <text x={PAD - 4} y={y} textAnchor="end" dominantBaseline="middle" fill={COLORS.textMuted} fontSize="8">{v}</text>
-                          </g>
-                        );
+                        const y = H - YPAD - ((v - 1) / (metricMax - 1)) * (H - YPAD * 2);
+                        return <line key={`grid-${v}`} x1={CHART_L} y1={y} x2={W - CHART_R} y2={y} stroke={COLORS.border} strokeWidth="0.5" />;
                       })}
+                      {/* 棒グラフ */}
                       {dataPoints.map((p, i) => {
                         if (p.val === null) return null;
-                        const barW = Math.max(4, (W - PAD * 2) / graphPeriod * 0.6);
-                        return <rect key={i} x={p.x - barW / 2} y={p.y} width={barW} height={H - PAD - p.y} fill={metricColor(p.val, graphMetric)} opacity="0.8" rx="2" />;
+                        return <rect key={i} x={p.x - barW / 2} y={p.y} width={barW} height={H - YPAD - p.y} fill={metricColor(p.val, graphMetric)} opacity="0.8" rx="2" />;
                       })}
+                      {/* Y軸ラベル（棒の上面に重なるよう最前面に） */}
+                      {Array.from({ length: metricMax }, (_, i) => i + 1).map(v => {
+                        const y = H - YPAD - ((v - 1) / (metricMax - 1)) * (H - YPAD * 2);
+                        return <text key={`label-${v}`} x={CHART_L - 4} y={y} textAnchor="end" dominantBaseline="middle" fill={COLORS.textMuted} fontSize="8">{v}</text>;
+                      })}
+                      {/* 日付ラベル */}
                       {dataPoints.filter((_, i) => graphPeriod === 14 ? i % 2 === 0 : i % 5 === 0).map((p, i) => (
                         <text key={i} x={p.x} y={H - 4} textAnchor="middle" fill={COLORS.textMuted} fontSize="7">{p.label}</text>
                       ))}
@@ -4054,7 +4103,7 @@ export default function App() {
                   {/* エクスポートボタン */}
                   <button className="no-print" onClick={handleWeeklyPrint}
                     style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    📄 PDFとして保存する
+                    <IconDownload size={16} />PDFとして保存する
                   </button>
                 </div>
               );
@@ -4322,7 +4371,7 @@ export default function App() {
 
           {(!selectedDetail.cbt || Object.keys(selectedDetail.cbt).length === 0) &&
            (!selectedDetail.ps || Object.keys(selectedDetail.ps).length === 0) && (
-            <div style={{ color: COLORS.textMuted, fontSize: 14, marginBottom: 24 }}>まだアプローチをしていないよ</div>
+            <div style={{ color: COLORS.textMuted, fontSize: 14, marginBottom: 24 }}>まだアプローチをしていません</div>
           )}
 
           <button onClick={() => startApproach(selectedDetail.id)} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8 }}>
@@ -4405,7 +4454,7 @@ export default function App() {
               <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, paddingLeft: 34 }}>今すぐ気持ちを楽にしたいとき。自分のコーピングリストから選んで対処する</div>
             </button>
           </div>
-          <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { setView("list"); setEditing(false); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
@@ -4428,7 +4477,7 @@ export default function App() {
                 <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>しっかり認知を再構成したいとき。根拠・反証・バランス思考まで丁寧に整理する</div>
               </button>
             </div>
-            <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => setView("approach")} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         ) : null;
       })()}
@@ -4464,7 +4513,7 @@ export default function App() {
               </div>
             )}
 
-            <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => setView("approach")} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
             {/* 確認ダイアログ */}
             {copingConfirm && (
