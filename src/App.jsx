@@ -838,8 +838,7 @@ export default function App() {
     style.textContent = "*, *::before, *::after { transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease !important; }";
     document.head.appendChild(style);
     const bg = dark ? COLORS_DARK.bg : COLORS_LIGHT.bg;
-    document.documentElement.style.backgroundColor = bg;
-    document.body.style.backgroundColor = bg;
+    document.documentElement.style.setProperty("--app-bg", bg);
     const themeColorMeta = document.querySelector("meta[name='theme-color']");
     if (themeColorMeta) themeColorMeta.setAttribute("content", bg);
     Object.assign(COLORS, dark ? COLORS_DARK : COLORS_LIGHT);
