@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Stride" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="theme-color" id="theme-color-meta" content="#0f1117" />
     <style>
       html, body {
         margin: 0;
@@ -22,6 +23,17 @@
       }
       ::-webkit-scrollbar { display: none; }
     </style>
+    <script>
+      (function () {
+        try {
+          var bg = localStorage.getItem('stride_theme') === 'light' ? '#f5f7fa' : '#0f1117';
+          document.documentElement.style.backgroundColor = bg;
+          document.body && (document.body.style.backgroundColor = bg);
+          var m = document.getElementById('theme-color-meta');
+          if (m) m.content = bg;
+        } catch (e) {}
+      })();
+    </script>
     <title>Stride</title>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-D38V0X6H9H"></script>
