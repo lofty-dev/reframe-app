@@ -4,7 +4,9 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const COLORS = {
+const THEME_KEY = "stride_theme";
+
+const COLORS_DARK = {
   bg: "#0f1117",
   surface: "#1a1d27",
   surfaceWarm: "#1e2132",
@@ -23,6 +25,29 @@ const COLORS = {
   danger: "#f87171",
   psAccent: "#818cf8",
 };
+
+const COLORS_LIGHT = {
+  bg: "#f5f7fa",
+  surface: "#ffffff",
+  surfaceWarm: "#f8fafc",
+  border: "#e2e8f0",
+  accent: "#0ea5e9",
+  accentSoft: "#e0f2fe",
+  accentText: "#0284c7",
+  text: "#1a1d2e",
+  textMuted: "#6b7280",
+  success: "#10b981",
+  successBg: "#dcfce7",
+  successText: "#10b981",
+  hint: "#f0f4ff",
+  hintBorder: "#c7d2fe",
+  hintText: "#475569",
+  danger: "#ef4444",
+  psAccent: "#6366f1",
+};
+
+const _initTheme = (() => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } })();
+let COLORS = { ...(_initTheme === "light" ? COLORS_LIGHT : COLORS_DARK) };
 
 const CBT3_STEPS = [
   {
@@ -200,7 +225,7 @@ const EmotionInput = ({ value, onChange }) => {
                       </button>
                       {sel && (
                         <select value={sel.intensity} onChange={(e) => handleSelectIntensity(name, parseInt(e.target.value))}
-                          style={{ ...sel, marginLeft: 6, padding: "4px 6px", borderRadius: 6, fontSize: 12, width: 70, background: COLORS.surface, color: COLORS.accent, border: `1px solid ${COLORS.accent}` }}>
+                          style={{ ...selStyle(), marginLeft: 6, padding: "4px 6px", borderRadius: 6, fontSize: 12, width: 70, background: COLORS.surface, color: COLORS.accent, border: `1px solid ${COLORS.accent}` }}>
                           {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
                         </select>
                       )}
@@ -283,7 +308,7 @@ const AutoThoughtInput = ({ value, onChange }) => {
           <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
           <textarea
             rows={2}
-            style={{ ...inp, flex: 1, resize: "none" }}
+            style={{ ...inpStyle(), flex: 1, resize: "none" }}
             placeholder="例）自分はダメな人間だ"
             value={t.text}
             onChange={(e) => handleChange(t.id, e.target.value)}
@@ -385,12 +410,12 @@ const formatDate = (dateStr) => {
 };
 const daysInMonth = (y, m) => new Date(parseInt(y), parseInt(m), 0).getDate();
 
-const sel = {
+const selStyle = () => ({
   flex: 1,
-  background: "#1a1d27",
-  border: "1px solid #2a2d3e",
+  background: COLORS.surface,
+  border: `1px solid ${COLORS.border}`,
   borderRadius: 10,
-  color: "#e8eaf0",
+  color: COLORS.text,
   fontSize: 15,
   padding: "12px 8px",
   outline: "none",
@@ -398,14 +423,14 @@ const sel = {
   appearance: "none",
   WebkitAppearance: "none",
   textAlign: "center",
-};
+});
 
-const inp = {
+const inpStyle = () => ({
   width: "100%",
-  background: "#151929",
-  border: "1px solid #2a2d3e",
+  background: COLORS.bg,
+  border: `1px solid ${COLORS.border}`,
   borderRadius: 10,
-  color: "#e8eaf0",
+  color: COLORS.text,
   fontSize: 15,
   padding: "12px 14px",
   outline: "none",
@@ -413,14 +438,14 @@ const inp = {
   fontFamily: "inherit",
   lineHeight: 1.7,
   boxSizing: "border-box",
-};
+});
 
 const BottomNav = ({ onBack, onHome }) => (
-  <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid #2a2d3e` }}>
-    <button onClick={onBack || onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
+  <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
+    <button onClick={onBack || onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
       <IconArrowLeft size={16} />戻る
     </button>
-    <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
+    <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
       <IconHome size={16} />ホーム
     </button>
   </div>
@@ -464,13 +489,13 @@ const DateSelector = ({ year, month, day, onYear, onMonth, onDay }) => {
   const dayOptions = Array.from({ length: daysInMonth(year, month) }, (_, i) => String(i + 1).padStart(2, "0"));
   return (
     <div style={{ display: "flex", gap: 8 }}>
-      <select value={year} onChange={(e) => onYear(e.target.value)} style={sel}>
+      <select value={year} onChange={(e) => onYear(e.target.value)} style={selStyle()}>
         {yearOptions.map((y) => <option key={y} value={y}>{y}年</option>)}
       </select>
-      <select value={month} onChange={(e) => { onMonth(e.target.value); if (parseInt(day) > daysInMonth(year, e.target.value)) onDay("01"); }} style={sel}>
+      <select value={month} onChange={(e) => { onMonth(e.target.value); if (parseInt(day) > daysInMonth(year, e.target.value)) onDay("01"); }} style={selStyle()}>
         {monthOptions.map((m) => <option key={m} value={m}>{parseInt(m)}月</option>)}
       </select>
-      <select value={day} onChange={(e) => onDay(e.target.value)} style={sel}>
+      <select value={day} onChange={(e) => onDay(e.target.value)} style={selStyle()}>
         {dayOptions.map((d) => <option key={d} value={d}>{parseInt(d)}日</option>)}
       </select>
     </div>
@@ -803,6 +828,21 @@ export default function App() {
   const t = todayStr();
   const [view, setView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
+  const [isDark, setIsDark] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) !== "light"; } catch { return true; }
+  });
+
+  const toggleTheme = (dark) => {
+    const style = document.createElement("style");
+    style.id = "__theme_tr__";
+    style.textContent = "*, *::before, *::after { transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease !important; }";
+    document.head.appendChild(style);
+    Object.assign(COLORS, dark ? COLORS_DARK : COLORS_LIGHT);
+    try { localStorage.setItem(THEME_KEY, dark ? "dark" : "light"); } catch {}
+    setIsDark(dark);
+    setTimeout(() => { const el = document.getElementById("__theme_tr__"); if (el) el.remove(); }, 400);
+  };
+
   const [records, setRecords] = useState(loadRecords);
   const [agreed, setAgreedState] = useState(hasAgreed);
   const [onboarded, setOnboardedState] = useState(hasOnboarded);
@@ -2930,11 +2970,11 @@ export default function App() {
               </div>
               <div>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>タイトル <span style={{ fontSize: 11 }}>任意</span></div>
-                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）デイケア遅刻" value={memoDraft.title} onChange={e => setMemoDraft({...memoDraft, title: e.target.value})} />
+                <input type="text" style={{ ...inpStyle(), resize: "none" }} placeholder="例）デイケア遅刻" value={memoDraft.title} onChange={e => setMemoDraft({...memoDraft, title: e.target.value})} />
               </div>
               <div>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>内容</div>
-                <textarea rows={8} style={inp} placeholder="自由に書いてください" value={memoDraft.body} onChange={e => setMemoDraft({...memoDraft, body: e.target.value})} />
+                <textarea rows={8} style={inpStyle()} placeholder="自由に書いてください" value={memoDraft.body} onChange={e => setMemoDraft({...memoDraft, body: e.target.value})} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
@@ -2969,11 +3009,11 @@ export default function App() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>タイトル</div>
-                    <input type="text" style={{ ...inp, resize: "none" }} value={memoEditDraft.title || ""} onChange={e => setMemoEditDraft({...memoEditDraft, title: e.target.value})} />
+                    <input type="text" style={{ ...inpStyle(), resize: "none" }} value={memoEditDraft.title || ""} onChange={e => setMemoEditDraft({...memoEditDraft, title: e.target.value})} />
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>内容</div>
-                    <textarea rows={8} style={inp} value={memoEditDraft.body || ""} onChange={e => setMemoEditDraft({...memoEditDraft, body: e.target.value})} />
+                    <textarea rows={8} style={inpStyle()} value={memoEditDraft.body || ""} onChange={e => setMemoEditDraft({...memoEditDraft, body: e.target.value})} />
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
@@ -3014,6 +3054,28 @@ export default function App() {
       {/* SETTINGS */}
       {view === "settings" && (
         <div className="page" style={{ padding: "20px 16px" }}>
+
+          {/* 表示設定 */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>表示設定</div>
+            <div style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 18px", border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>テーマ</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{isDark ? "ダークモード" : "ライトモード"}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: isDark ? COLORS.textMuted : COLORS.accent, fontWeight: isDark ? 400 : 700 }}>ライト</span>
+                <button
+                  onClick={() => toggleTheme(!isDark)}
+                  style={{ width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", position: "relative", padding: 0,
+                    background: isDark ? COLORS.accent : COLORS.border, transition: "background 0.25s" }}>
+                  <div style={{ position: "absolute", top: 3, left: isDark ? 25 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                    transition: "left 0.25s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                </button>
+                <span style={{ fontSize: 12, color: isDark ? COLORS.accent : COLORS.textMuted, fontWeight: isDark ? 700 : 400 }}>ダーク</span>
+              </div>
+            </div>
+          </div>
 
           {/* データ管理 */}
           <div style={{ marginTop: 24 }}>
@@ -3443,7 +3505,7 @@ export default function App() {
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 300 }}>
               <div style={{ background: COLORS.surface, borderRadius: "16px 16px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, boxSizing: "border-box" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>コーピングを編集</div>
-                <textarea rows={3} style={{ ...inp, marginBottom: 16 }} value={copingEditText} onChange={e => setCopingEditText(e.target.value)} />
+                <textarea rows={3} style={{ ...inpStyle(), marginBottom: 16 }} value={copingEditText} onChange={e => setCopingEditText(e.target.value)} />
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>難易度（1〜5）</div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -3558,7 +3620,7 @@ export default function App() {
         <div className="page" style={{ padding: "24px 16px" }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>どんな対処法？</div>
-            <textarea rows={4} style={inp} placeholder="例）散歩に出かける、好きな音楽を聴く、深呼吸を10回する" value={newCoping.text} onChange={(e) => setNewCoping({ ...newCoping, text: e.target.value })} />
+            <textarea rows={4} style={inpStyle()} placeholder="例）散歩に出かける、好きな音楽を聴く、深呼吸を10回する" value={newCoping.text} onChange={(e) => setNewCoping({ ...newCoping, text: e.target.value })} />
           </div>
 
           <div style={{ marginBottom: 24 }}>
@@ -3769,7 +3831,7 @@ export default function App() {
                     {crisisModal.type === "crisis_signs" && "危機のサイン"}
                     {crisisModal.type === "crisis_contacts" && "対処法・連絡先"}
                   </div>
-                  <textarea rows={3} style={{ ...inp, marginBottom: 10 }}
+                  <textarea rows={3} style={{ ...inpStyle(), marginBottom: 10 }}
                     placeholder={
                       crisisModal.type === "safe" ? "例）よく眠れている、趣味を楽しめている" :
                       crisisModal.type === "caution_triggers" ? "例）締め切りが重なる" :
@@ -3782,7 +3844,7 @@ export default function App() {
                     autoFocus
                   />
                   {crisisModal.type !== "safe" && crisisModal.type !== "crisis_signs" && crisisModal.type !== "crisis_contacts" && (
-                    <textarea rows={2} style={{ ...inp }}
+                    <textarea rows={2} style={inpStyle()}
                       placeholder="対処法を書いておこう"
                       value={crisisModal.text2}
                       onChange={(e) => setCrisisModal({ ...crisisModal, text2: e.target.value })}
@@ -4210,7 +4272,7 @@ export default function App() {
           {/* 一言メモ */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>一言メモ<span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400, marginLeft: 6 }}>任意</span></div>
-            <textarea rows={3} style={inp} placeholder="今日の気持ちや気づきをひとこと" value={checkinDraft.memo} onChange={(e) => setCheckinDraft({ ...checkinDraft, memo: e.target.value })} />
+            <textarea rows={3} style={inpStyle()} placeholder="今日の気持ちや気づきをひとこと" value={checkinDraft.memo} onChange={(e) => setCheckinDraft({ ...checkinDraft, memo: e.target.value })} />
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
@@ -4232,7 +4294,7 @@ export default function App() {
           </div>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>何があった？</div>
-            <textarea rows={4} style={inp} placeholder="例）上司に仕事のやり方を批判された" value={newSituation} onChange={(e) => setNewSituation(e.target.value)} />
+            <textarea rows={4} style={inpStyle()} placeholder="例）上司に仕事のやり方を批判された" value={newSituation} onChange={(e) => setNewSituation(e.target.value)} />
           </div>
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>カテゴリ <span style={{ fontSize: 11 }}>任意</span></div>
@@ -4258,7 +4320,7 @@ export default function App() {
           </div>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>浮かんだ考え <span style={{ fontSize: 11 }}>任意</span></div>
-            <input type="text" style={{ width: "100%", background: "#151929", border: "1px solid #2a2d3e", borderRadius: 10, color: "#e8eaf0", fontSize: 15, padding: "12px 14px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} placeholder="例）また失敗した、どうせダメだ" value={newFirstThought} onChange={(e) => setNewFirstThought(e.target.value)} />
+            <input type="text" style={{ ...inpStyle(), resize: undefined, boxSizing: "border-box" }} placeholder="例）また失敗した、どうせダメだ" value={newFirstThought} onChange={(e) => setNewFirstThought(e.target.value)} />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
@@ -4390,7 +4452,7 @@ export default function App() {
           </div>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>何があった？</div>
-            <textarea rows={4} style={inp} value={editSituation} onChange={(e) => setEditSituation(e.target.value)} />
+            <textarea rows={4} style={inpStyle()} value={editSituation} onChange={(e) => setEditSituation(e.target.value)} />
           </div>
           {selectedDetail.cbt && Object.keys(selectedDetail.cbt).length > 0 && (
             <div style={{ marginBottom: 24 }}>
@@ -4398,7 +4460,7 @@ export default function App() {
               {CBT_STEPS.map((step) => (
                 <div key={step.id} style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{step.label}</div>
-                  <textarea rows={3} style={inp} placeholder={step.placeholder} value={editCbt[step.id] || ""} onChange={(e) => setEditCbt({ ...editCbt, [step.id]: e.target.value })} />
+                  <textarea rows={3} style={inpStyle()} placeholder={step.placeholder} value={editCbt[step.id] || ""} onChange={(e) => setEditCbt({ ...editCbt, [step.id]: e.target.value })} />
                 </div>
               ))}
             </div>
@@ -4409,7 +4471,7 @@ export default function App() {
               {PS_STEPS.map((step) => (
                 <div key={step.id} style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{step.label}</div>
-                  <textarea rows={3} style={inp} placeholder={step.placeholder} value={editPs[step.id] || ""} onChange={(e) => setEditPs({ ...editPs, [step.id]: e.target.value })} />
+                  <textarea rows={3} style={inpStyle()} placeholder={step.placeholder} value={editPs[step.id] || ""} onChange={(e) => setEditPs({ ...editPs, [step.id]: e.target.value })} />
                 </div>
               ))}
             </div>
@@ -4600,7 +4662,7 @@ export default function App() {
                     <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
                     <textarea
                       rows={2}
-                      style={{ ...inp, flex: 1, resize: "none" }}
+                      style={{ ...inpStyle(), flex: 1, resize: "none" }}
                       placeholder="例）ミスの原因が自分でわからない"
                       value={item.text}
                       onChange={(e) => setPsBreakdownItems(prev => prev.map(s => s.id === item.id ? { ...s, text: e.target.value } : s))}
@@ -4640,7 +4702,7 @@ export default function App() {
                     <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
                     <textarea
                       rows={2}
-                      style={{ ...inp, flex: 1, resize: "none" }}
+                      style={{ ...inpStyle(), flex: 1, resize: "none" }}
                       placeholder="例）作業前にメモで手順を確認する"
                       value={item.text}
                       onChange={(e) => setPsSolutionItems(prev => prev.map(s => s.id === item.id ? { ...s, text: e.target.value } : s))}
@@ -4677,7 +4739,7 @@ export default function App() {
               <div>
                 <textarea
                   rows={4}
-                  style={inp}
+                  style={inpStyle()}
                   placeholder={PS_STEPS[psStep].placeholder}
                   value={psDraft[PS_STEPS[psStep].id] || ""}
                   onChange={(e) => setPsDraft({ ...psDraft, [PS_STEPS[psStep].id]: e.target.value })}
@@ -4686,7 +4748,7 @@ export default function App() {
             ) : (
               <textarea
                 rows={5}
-                style={inp}
+                style={inpStyle()}
                 placeholder={PS_STEPS[psStep].placeholder}
                 value={psDraft[PS_STEPS[psStep].id] || ""}
                 onChange={(e) => setPsDraft({ ...psDraft, [PS_STEPS[psStep].id]: e.target.value })}
@@ -4765,7 +4827,7 @@ export default function App() {
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>試してみた結果どうだったか</div>
               <textarea
                 rows={4}
-                style={inp}
+                style={inpStyle()}
                 placeholder="例）手順メモを作ったら、作業前に確認できてミスが減った"
                 value={psReviewDraft.result}
                 onChange={(e) => setPsReviewDraft(prev => ({ ...prev, result: e.target.value }))}
@@ -4775,7 +4837,7 @@ export default function App() {
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>気づいたこと</div>
               <textarea
                 rows={4}
-                style={inp}
+                style={inpStyle()}
                 placeholder="例）全部はできなかったけど、意識するだけで少し楽になった"
                 value={psReviewDraft.insight}
                 onChange={(e) => setPsReviewDraft(prev => ({ ...prev, insight: e.target.value }))}
@@ -4950,7 +5012,7 @@ export default function App() {
                 ) : (sid !== "emotion" && sid !== "reEmotion" && sid !== "emotion3") ? (
                   <textarea
                     rows={5}
-                    style={inp}
+                    style={inpStyle()}
                     placeholder={currentStep.placeholder}
                     value={cbtDraft[sid] || ""}
                     onChange={(e) => setCbtDraft({ ...cbtDraft, [sid]: e.target.value })}
