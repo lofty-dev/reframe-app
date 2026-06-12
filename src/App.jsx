@@ -991,6 +991,7 @@ export default function App() {
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isAndroid = /android/i.test(navigator.userAgent);
+  const isIosChrome = isIos && /CriOS/i.test(navigator.userAgent);
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
@@ -1459,7 +1460,17 @@ export default function App() {
         </div>
 
         <div style={{ background: COLORS.surface, borderRadius: 16, padding: "20px 18px", border: `1px solid ${COLORS.border}`, marginBottom: 24 }}>
-          {isIos && (
+          {isIosChrome && (
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              <div style={{ marginBottom: 14 }}><IconDeviceMobile size={36} color={COLORS.accent} /></div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>Safariで開いてください</div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+                iPhoneをお使いの方はSafariで開くと<br />ホーム画面に追加できます。<br />
+                <span style={{ fontSize: 12 }}>Chromeではホーム画面への追加に対応していません。</span>
+              </div>
+            </div>
+          )}
+          {isIos && !isIosChrome && (
             <>
               <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>iPhoneの場合</div>
               {[
@@ -1676,7 +1687,13 @@ export default function App() {
       {view === "home" && (
         <div className="page" style={{ padding: "24px 16px 20px" }}>
           {/* PWAバナー */}
-          {!isPwa && (
+          {!isPwa && isIosChrome && (
+            <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <IconDeviceMobile size={16} color={COLORS.accent} style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5 }}>iPhoneをお使いの方はSafariで開くとホーム画面に追加できます</div>
+            </div>
+          )}
+          {!isPwa && !isIosChrome && (
             <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: 12, color: COLORS.textMuted }}>📱 ホーム画面に追加できるよ</div>
               <button onClick={() => { setPwaPromptedState(false); }}
