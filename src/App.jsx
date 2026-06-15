@@ -626,6 +626,14 @@ const setPwaPrompted = () => {
   try { localStorage.setItem(PWA_KEY, "true"); } catch (e) {}
 };
 
+const FEEDBACK_BANNER_KEY = "stride_feedback_banner_dismissed";
+const hasFeedbackBannerDismissed = () => {
+  try { return localStorage.getItem(FEEDBACK_BANNER_KEY) === "true"; } catch (e) { return false; }
+};
+const setFeedbackBannerDismissed = () => {
+  try { localStorage.setItem(FEEDBACK_BANNER_KEY, "true"); } catch (e) {}
+};
+
 const ALL_STORAGE_KEYS = [
   "reframe_records", "reframe_checkins", "reframe_copings",
   "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
@@ -991,6 +999,7 @@ export default function App() {
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
   const [pwaPrompted, setPwaPromptedState] = useState(hasPwaPrompted);
+  const [showFeedbackBanner, setShowFeedbackBanner] = useState(() => !hasFeedbackBannerDismissed());
   const [importResult, setImportResult] = useState(null);
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -1704,6 +1713,27 @@ export default function App() {
               <button onClick={() => { setPwaPromptedState(false); }}
                 style={{ flexShrink: 0, background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, borderRadius: 8, color: COLORS.accent, fontSize: 11, fontWeight: 700, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>
                 追加方法を見る
+              </button>
+            </div>
+          )}
+
+          {/* フィードバックバナー */}
+          {showFeedbackBanner && (
+            <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
+              <div style={{ flex: 1, paddingRight: 20 }}>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                  この度はアプリを使っていただきありがとうございます！<br />よろしければ使ってみた感想や要望を教えてください！
+                </div>
+                <button
+                  onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSexa5H2X037mrCEGrOwcRil-VWOlz3byyCVcQmJ3cAqMKIy9g/viewform?usp=publish-editor", "_blank")}
+                  style={{ marginTop: 6, background: "none", border: "none", padding: 0, color: COLORS.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
+                  フィードバックフォームを開く →
+                </button>
+              </div>
+              <button
+                onClick={() => { setFeedbackBannerDismissed(); setShowFeedbackBanner(false); }}
+                style={{ position: "absolute", top: 8, right: 10, background: "none", border: "none", color: COLORS.textMuted, fontSize: 16, cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.6 }}>
+                ×
               </button>
             </div>
           )}
