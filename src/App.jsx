@@ -1488,6 +1488,7 @@ export default function App() {
                   <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{text}</div>
                 </div>
               ))}
+              <img src="/home.png" alt="ホーム画面への追加手順" style={{ width: "100%", borderRadius: 10, marginTop: 8, display: "block" }} />
             </>
           )}
           {isAndroid && (
