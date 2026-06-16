@@ -998,6 +998,14 @@ export default function App() {
   const isAndroid = /android/i.test(navigator.userAgent);
   const isIosChrome = isIos && /CriOS/i.test(navigator.userAgent);
 
+  useEffect(() => {
+    const splash = document.getElementById("splash-screen");
+    if (splash) {
+      splash.classList.add("splash-hide");
+      setTimeout(() => splash.remove(), 400);
+    }
+  }, []);
+
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
   useEffect(() => { saveCopings(copings); }, [copings]);
