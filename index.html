@@ -17,9 +17,13 @@
         background-color: var(--app-bg, #0f1117);
         padding-top: env(safe-area-inset-top);
         overflow-x: hidden;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
       #root {
         height: 100%;
+        background-color: var(--app-bg, #0f1117);
       }
       ::-webkit-scrollbar { display: none; }
     </style>
