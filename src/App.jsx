@@ -6,6 +6,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 const THEME_KEY = "stride_theme";
 
+const ANNOUNCEMENTS = [
+  { date: "2026/06/18", content: "ご要望のあった過去のチェックイン編集機能を追加" },
+  { date: "2026/06/17", content: "Android環境でのバグ修正" },
+  { date: "2026/06/17", content: "Bridge Sessionの表示不具合を修正" },
+];
+
 const COLORS_DARK = {
   bg: "#0f1117",
   surface: "#1a1d27",
@@ -905,6 +911,8 @@ export default function App() {
 
   const [checkins, setCheckins] = useState(loadCheckins);
   const [checkinDraft, setCheckinDraft] = useState({ mood: 5, condition: null, sleep: null, memo: "" });
+  const [checkinEditDate, setCheckinEditDate] = useState(null);
+  const [checkinEditDraft, setCheckinEditDraft] = useState({ mood: 5, condition: null, sleep: null, memo: "" });
 
   const [copings, setCopings] = useState(loadCopings);
   const [copingSort, setCopingSort] = useState("difficulty");
@@ -919,6 +927,10 @@ export default function App() {
   const [crisisPlan, setCrisisPlan] = useState(loadCrisisPlan);
   const [crisisModal, setCrisisModal] = useState(null);
   const [crisisTab, setCrisisTab] = useState("safe");
+  const [showCopingGuide, setShowCopingGuide] = useState(false);
+  const [showCrisisGuide, setShowCrisisGuide] = useState(false);
+  const [copingGuidePrompt, setCopingGuidePrompt] = useState(false);
+  const [crisisGuidePrompt, setCrisisGuidePrompt] = useState(false);
 
   const [graphType, setGraphType] = useState("line"); // "line" | "bar"
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
@@ -934,6 +946,8 @@ export default function App() {
   const [selectedAchievementDate, setSelectedAchievementDate] = useState(null);
 
   const [medicalLogPersonId, setMedicalLogPersonId] = useState(null);
+  const [medicalLogDetailId, setMedicalLogDetailId] = useState(null);
+  const [medicalLogEditDraft, setMedicalLogEditDraft] = useState({ date: "", content: "", reply: "" });
 
   const [memos, setMemos] = useState(loadMemo);
   const [memoView, setMemoView] = useState("list");
@@ -1006,6 +1020,50 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (view !== "home") {
+      window.history.pushState({ view }, "", "");
+    }
+  }, [view]);
+
+  useEffect(() => {
+    const onPopState = (e) => {
+      if (view === "home") {
+        return;
+      }
+      e.preventDefault();
+      if (view === "newCoping") { setView("coping"); }
+      else if (view === "checkin" || view === "checkinHistory") { setView("home"); setActiveTab("home"); }
+      else if (view === "settings" || view === "guide" || view === "support") { setView("home"); setActiveTab("home"); }
+      else if (view === "list") { setView("records"); setActiveTab("records"); }
+      else if (view === "achievement") { setView("records"); setActiveTab("records"); }
+      else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "bridgeSettings") { setView("bridge"); }
+      else if (view === "memo") { setView("records"); setActiveTab("records"); }
+      else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
+      else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
+      else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
+      else if (view === "mindfulness") { setView("tools"); setActiveTab("tools"); }
+      else if (view === "new") { setView("list"); }
+      else if (view === "detail") { setView("list"); setEditing(false); }
+      else if (view === "copingSelect") { setView("approach"); }
+      else if (view === "cbtSelect") { setView("approach"); }
+      else if (view === "cbt") { setView("cbtSelect"); }
+      else if (view === "ps") { setView("approach"); }
+      else if (view === "records") { setView("home"); setActiveTab("home"); }
+      else if (view === "tools") { setView("home"); setActiveTab("home"); }
+      else if (view === "medicalTab") { setView("home"); setActiveTab("home"); }
+      else if (view === "medicalLogEdit") { setView("medicalLog"); }
+      else if (view === "checkinEdit") { setView("checkinHistory"); }
+      else { setView("home"); setActiveTab("home"); }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [view]);
+
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
   useEffect(() => { saveCopings(copings); }, [copings]);
@@ -1016,7 +1074,7 @@ export default function App() {
   useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
-  useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); } }, [showPrivacy]);
+  useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); } }, [showPrivacy]);
 
   const printHtml = (html) => {
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
@@ -1601,11 +1659,13 @@ export default function App() {
             <button onClick={() => {
               const goHome = () => { setView("home"); setActiveTab("home"); };
               if (view === "newCoping") { setView("coping"); }
+              else if (view === "checkinEdit") { setView("checkinHistory"); }
               else if (view === "checkin" || view === "checkinHistory") { goHome(); }
               else if (view === "settings" || view === "guide" || view === "support") { goHome(); }
               else if (view === "list") { setView("records"); setActiveTab("records"); }
               else if (view === "achievement") { setView("records"); setActiveTab("records"); }
               else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "medicalLogEdit") { setView("medicalLog"); }
               else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "bridgeSettings") { setView("bridge"); }
@@ -1644,6 +1704,7 @@ export default function App() {
                 {view === "new" && "出来事を記録"}
                 {view === "checkin" && "今日のチェックイン"}
                 {view === "checkinHistory" && "チェックイン履歴"}
+                {view === "checkinEdit" && "チェックインを編集"}
                 {view === "copingDetail" && "コーピングの詳細"}
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
@@ -1654,6 +1715,7 @@ export default function App() {
                 {view === "mindfulness" && "マインドフルネス"}
                 {view === "settings" && "設定"}
                 {view === "medicalLog" && "診察等の記録"}
+                {view === "medicalLogEdit" && "記録の編集"}
                 {view === "bridgePerson" && "Bridge Session"}
                 {view === "bridge" && "Bridge Session"}
                 {view === "bridgeSettings" && "表示項目の設定"}
@@ -1688,7 +1750,7 @@ export default function App() {
               <IconSettings size={22} />
             </button>
           )}
-          {["checkinHistory", "list", "cbt", "ps", "coping", "achievement", "mindfulness", "crisis", "tellMemos", "bridge", "medicalLog"].includes(view) && (
+          {["checkinHistory", "list", "cbt", "ps", "coping", "achievement", "mindfulness", "crisis", "tellMemos", "bridge", "medicalLog", "checkinEdit"].includes(view) && (
             <button onClick={() => setHelpModal(view)}
               style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
               <IconHelpCircle size={22} />
@@ -1751,7 +1813,7 @@ export default function App() {
             <div style={{ background: COLORS.surface, borderRadius: 16, padding: "16px 18px", marginBottom: 16, border: `1px solid ${COLORS.accent}30` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>Today's Check-in</div>
-                <button onClick={() => { setCheckinDraft({ mood: todayCheckin.mood, condition: todayCheckin.condition, sleep: todayCheckin.sleep, memo: todayCheckin.memo || "" }); setView("checkin"); }}
+                <button onClick={() => { const ns = todayCheckin.sleep === "4〜6時間" ? "4〜6時間未満" : todayCheckin.sleep === "6〜8時間" ? "6〜8時間未満" : todayCheckin.sleep; setCheckinDraft({ mood: todayCheckin.mood, condition: todayCheckin.condition, sleep: ns, memo: todayCheckin.memo || "" }); setView("checkin"); }}
                   style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer", padding: 0 }}>編集</button>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -1831,6 +1893,22 @@ export default function App() {
                 <span>フィードバック</span>
               </div>
             </button>
+          </div>
+
+          {/* お知らせ */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <IconBell size={16} color={COLORS.textMuted} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>お知らせ</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {ANNOUNCEMENTS.map((a, i) => (
+                <div key={i} style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>{a.date}</div>
+                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{a.content}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -2104,7 +2182,7 @@ export default function App() {
                   ) : (
                     <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
                       {last14.map((d, i) => {
-                        const lv = d.sleep === "4時間未満" ? 1 : d.sleep === "4〜6時間" ? 2 : d.sleep === "6〜8時間" ? 3 : d.sleep === "8時間以上" ? 4 : null;
+                        const lv = d.sleep === "4時間未満" ? 1 : (d.sleep === "4〜6時間" || d.sleep === "4〜6時間未満") ? 2 : (d.sleep === "6〜8時間" || d.sleep === "6〜8時間未満") ? 3 : d.sleep === "8時間以上" ? 4 : null;
                         const barH = lv !== null ? Math.max(4, (lv / 4) * 44) : 4;
                         const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
                         return (
@@ -2982,18 +3060,23 @@ export default function App() {
                         <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 14 }}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                             <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
-                            <button onClick={() => setTellMemoDeleteId(m.id)}
-                              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}>
-                              ×
-                            </button>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <button onClick={() => {
+                                setMedicalLogDetailId(m.id);
+                                setMedicalLogEditDraft({ date: m.date, content: m.content, reply: check.reply || "" });
+                                setView("medicalLogEdit");
+                              }}
+                                style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
+                              <button onClick={() => setTellMemoDeleteId(m.id)}
+                                style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.5 }}>×</button>
+                            </div>
                           </div>
                           <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>伝えたこと</div>
                           <div style={{ fontSize: 14, color: COLORS.text, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7, marginBottom: 14, paddingLeft: 2 }}>{m.content}</div>
                           <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>言われたこと</div>
-                          <textarea value={check.reply || ""} onChange={e => updateTellReply(m.id, currentPersonId, e.target.value)}
-                            placeholder="言われたことや返答をメモできます"
-                            rows={3}
-                            style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 12px", color: COLORS.text, fontSize: 13, boxSizing: "border-box", resize: "vertical", lineHeight: 1.6 }} />
+                          <div style={{ fontSize: 14, color: COLORS.text, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7, paddingLeft: 2 }}>
+                            {check.reply || <span style={{ color: COLORS.textMuted, fontStyle: "italic", fontSize: 13 }}>未記入</span>}
+                          </div>
                         </div>
                       );
                     })
@@ -3003,6 +3086,49 @@ export default function App() {
             )}
             <div style={{ padding: "0 16px" }}>
               <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MEDICAL LOG EDIT */}
+      {view === "medicalLogEdit" && (() => {
+        const memo = tellMemos.find(m => m.id === medicalLogDetailId);
+        if (!memo) return null;
+        const completedMemos = tellMemos.filter(m => m.completed);
+        const activePeople = tellPeople.filter(p => completedMemos.some(m => m.personIds.includes(p.id)));
+        const currentPersonId = medicalLogPersonId && activePeople.some(p => p.id === medicalLogPersonId)
+          ? medicalLogPersonId
+          : activePeople[0]?.id ?? null;
+        const [ey, em, ed] = medicalLogEditDraft.date.split("-");
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
+              <DateSelector year={ey} month={em} day={ed}
+                onYear={y => setMedicalLogEditDraft({ ...medicalLogEditDraft, date: toDateStr(y, em, ed) })}
+                onMonth={m => setMedicalLogEditDraft({ ...medicalLogEditDraft, date: toDateStr(ey, m, ed) })}
+                onDay={d => setMedicalLogEditDraft({ ...medicalLogEditDraft, date: toDateStr(ey, em, d) })} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>伝えたこと</div>
+              <textarea rows={5} style={inpStyle()} value={medicalLogEditDraft.content}
+                onChange={e => setMedicalLogEditDraft({ ...medicalLogEditDraft, content: e.target.value })} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>言われたこと</div>
+              <textarea rows={5} style={inpStyle()} value={medicalLogEditDraft.reply}
+                placeholder="言われたことや返答をメモできます"
+                onChange={e => setMedicalLogEditDraft({ ...medicalLogEditDraft, reply: e.target.value })} />
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setView("medicalLog")}
+                style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => {
+                setTellMemos(prev => prev.map(m => m.id === medicalLogDetailId ? { ...m, date: medicalLogEditDraft.date, content: medicalLogEditDraft.content, checks: { ...m.checks, [currentPersonId]: { ...(m.checks[currentPersonId] || {}), reply: medicalLogEditDraft.reply } } } : m));
+                setView("medicalLog");
+              }}
+                style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
             </div>
           </div>
         );
@@ -3353,6 +3479,15 @@ export default function App() {
                 </div>
               );
             })}
+            <div style={{ background: COLORS.surface, borderRadius: 14, marginTop: 16, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <IconDeviceMobile size={16} color={COLORS.textMuted} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Androidをお使いの方へ</div>
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7 }}>
+                Androidをお使いの方は、スワイプでの戻る操作ではなく、画面内の「戻る」ボタンをご利用ください。
+              </div>
+            </div>
             <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
@@ -3492,7 +3627,15 @@ export default function App() {
           )}
 
           {copings.length === 0 && (
-            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだコーピングが登録されていません。<br />上のボタンから追加できます</div>
+            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>
+              まだコーピングが登録されていません。<br />上のボタンから追加できます
+              <div style={{ marginTop: 16 }}>
+                <button onClick={() => setCopingGuidePrompt(true)}
+                  style={{ background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}40`, borderRadius: 10, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px 20px", cursor: "pointer" }}>
+                  書き方ガイドを見る
+                </button>
+              </div>
+            </div>
           )}
 
           {(() => {
@@ -3716,6 +3859,15 @@ export default function App() {
       {/* CRISIS PLAN */}
       {view === "crisis" && (
         <div className="page" style={{ padding: "20px 16px" }}>
+
+          {crisisPlan.safe.length === 0 && crisisPlan.caution_triggers.length === 0 && crisisPlan.caution_signs.length === 0 && crisisPlan.crisis_signs.length === 0 && crisisPlan.crisis_contacts.length === 0 && (
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <button onClick={() => setCrisisGuidePrompt(true)}
+                style={{ background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}40`, borderRadius: 10, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px 20px", cursor: "pointer" }}>
+                書き方ガイドを見る
+              </button>
+            </div>
+          )}
 
           {/* タブ */}
           <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 24 }}>
@@ -3983,7 +4135,7 @@ export default function App() {
         const CHART_W = W - CHART_L - CHART_R;
 
         const conditionScore = (c) => c === "とても良い" ? 5 : c === "良い" ? 4 : c === "普通" ? 3 : c === "悪い" ? 2 : c === "とても悪い" ? 1 : null;
-        const sleepScore = (s) => s === "4時間未満" ? 1 : s === "4〜6時間" ? 2 : s === "6〜8時間" ? 3 : s === "8時間以上" ? 4 : null;
+        const sleepScore = (s) => s === "4時間未満" ? 1 : (s === "4〜6時間" || s === "4〜6時間未満") ? 2 : (s === "6〜8時間" || s === "6〜8時間未満") ? 3 : s === "8時間以上" ? 4 : null;
         const metricColor = (v, m) => {
           if (m === "mood") return moodColor(v);
           if (m === "condition") return v >= 4 ? COLORS.accent : v >= 3 ? "#e0a855" : COLORS.danger;
@@ -4255,6 +4407,15 @@ export default function App() {
                             </div>
                             {data.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4, lineHeight: 1.5 }}>「{data.memo}」</div>}
                           </div>
+                          <button onClick={() => {
+                            setCheckinEditDate(data.date);
+                            const normSleep = data.sleep === "4〜6時間" ? "4〜6時間未満" : data.sleep === "6〜8時間" ? "6〜8時間未満" : data.sleep;
+                            setCheckinEditDraft({ mood: data.mood, condition: data.condition, sleep: normSleep, memo: data.memo || "" });
+                            setView("checkinEdit");
+                          }}
+                            style={{ flexShrink: 0, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 11, padding: "5px 10px" }}>
+                            編集
+                          </button>
                         </div>
                       </div>
                     );
@@ -4314,7 +4475,7 @@ export default function App() {
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>昨夜の睡眠時間は？<span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400, marginLeft: 6 }}>任意</span></div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {["4時間未満", "4〜6時間", "6〜8時間", "8時間以上"].map((s) => (
+              {["4時間未満", "4〜6時間未満", "6〜8時間未満", "8時間以上"].map((s) => (
                 <button key={s} onClick={() => setCheckinDraft({ ...checkinDraft, sleep: checkinDraft.sleep === s ? null : s })}
                   style={{ padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${checkinDraft.sleep === s ? COLORS.accent : COLORS.border}`, background: checkinDraft.sleep === s ? COLORS.accentSoft : COLORS.surface, color: checkinDraft.sleep === s ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: checkinDraft.sleep === s ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
                   {s}
@@ -4338,6 +4499,77 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* CHECKIN EDIT */}
+      {view === "checkinEdit" && (() => {
+        const editDateLabel = checkinEditDate ? (() => { const [, m, d] = checkinEditDate.split("-"); return `${parseInt(m)}月${parseInt(d)}日`; })() : "";
+        return (
+          <div className="page" style={{ padding: "24px 16px" }}>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>{editDateLabel}のチェックインを編集</div>
+            {/* 気分スコア */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>気分</div>
+                {checkinEditDraft.mood && (
+                  <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.accentText, lineHeight: 1 }}>{checkinEditDraft.mood}</div>
+                )}
+              </div>
+              <input
+                type="range" min="1" max="10" step="1"
+                value={checkinEditDraft.mood ?? 5}
+                onChange={(e) => setCheckinEditDraft({ ...checkinEditDraft, mood: parseInt(e.target.value) })}
+                style={{ width: "100%", accentColor: COLORS.accent, height: 6, cursor: "pointer" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: COLORS.textMuted }}>
+                <span>1 つらい</span><span>最高 10</span>
+              </div>
+            </div>
+
+            {/* 体調 */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>体調<span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400, marginLeft: 6 }}>任意</span></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {["とても良い", "良い", "普通", "悪い", "とても悪い"].map((c) => (
+                  <button key={c} onClick={() => setCheckinEditDraft({ ...checkinEditDraft, condition: checkinEditDraft.condition === c ? null : c })}
+                    style={{ padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${checkinEditDraft.condition === c ? COLORS.accent : COLORS.border}`, background: checkinEditDraft.condition === c ? COLORS.accentSoft : COLORS.surface, color: checkinEditDraft.condition === c ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: checkinEditDraft.condition === c ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 睡眠時間 */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>睡眠時間<span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400, marginLeft: 6 }}>任意</span></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {["4時間未満", "4〜6時間未満", "6〜8時間未満", "8時間以上"].map((s) => (
+                  <button key={s} onClick={() => setCheckinEditDraft({ ...checkinEditDraft, sleep: checkinEditDraft.sleep === s ? null : s })}
+                    style={{ padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${checkinEditDraft.sleep === s ? COLORS.accent : COLORS.border}`, background: checkinEditDraft.sleep === s ? COLORS.accentSoft : COLORS.surface, color: checkinEditDraft.sleep === s ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: checkinEditDraft.sleep === s ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 一言メモ */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>一言メモ<span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400, marginLeft: 6 }}>任意</span></div>
+              <textarea rows={3} style={inpStyle()} placeholder="気持ちや気づきをひとこと" value={checkinEditDraft.memo} onChange={(e) => setCheckinEditDraft({ ...checkinEditDraft, memo: e.target.value })} />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setView("checkinHistory")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => {
+                setCheckins(prev => prev.map(c => c.date === checkinEditDate ? { ...c, ...checkinEditDraft } : c));
+                setView("checkinHistory");
+              }}
+                style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>
+                保存する
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* NEW */}
       {view === "new" && (
@@ -5269,6 +5501,147 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* コーピング書き方ガイドプロンプト */}
+      {copingGuidePrompt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>書き方ガイドを見ますか？</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              コーピングリストの書き方のヒントを表示します。
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setCopingGuidePrompt(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>いいえ</button>
+              <button onClick={() => { setCopingGuidePrompt(false); setShowCopingGuide(true); }} style={{ flex: 1, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>はい</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* コーピング書き方ガイド */}
+      {showCopingGuide && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400 }}
+          onClick={() => setShowCopingGuide(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 0" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: COLORS.border }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px 8px" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>コーピングリストの書き方ガイド</div>
+              <button onClick={() => setShowCopingGuide(false)}
+                style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 4, lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "0 20px 32px", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${COLORS.border}` }}>
+                コーピングとは、ストレスを感じたときに自分を助ける「対処法」のこと。あらかじめリストにしておくと、つらいときにすぐ使えます。
+              </div>
+              {[
+                { title: "体を動かす系", items: ["散歩に出る", "ストレッチをする", "深呼吸を3回する", "階段を上り下りする"] },
+                { title: "リラックス系", items: ["好きな音楽を聴く", "お風呂にゆっくり浸かる", "ホットドリンクを飲む", "アロマを焚く"] },
+                { title: "気分転換系", items: ["好きな動画を観る", "外の景色を眺める", "推しの写真を見る", "掃除や片付けをする"] },
+                { title: "人とつながる系", items: ["友人にLINEする", "家族に電話する", "SNSで気持ちを書く", "ペットと触れ合う"] },
+                { title: "自分を整理する系", items: ["気持ちを紙に書き出す", "今感じていることを言葉にしてみる", "マインドフルネスをする"] },
+              ].map((cat, i) => (
+                <div key={i} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.accent, marginBottom: 8 }}>{cat.title}</div>
+                  {cat.items.map((item, j) => (
+                    <div key={j} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: COLORS.accent, flexShrink: 0 }} />
+                      <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{item}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{ background: COLORS.bg, borderRadius: 10, padding: "12px 14px", marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7 }}>
+                  自分にとって「これなら手軽にできそう」と思えるものを選んで、難易度と効果を設定して登録してみましょう。調子が悪いときこそ、難易度の低いものから試してみるのがコツです。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* クライシスプラン書き方ガイドプロンプト */}
+      {crisisGuidePrompt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>書き方ガイドを見ますか？</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              クライシスプランの書き方のヒントを表示します。
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setCrisisGuidePrompt(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>いいえ</button>
+              <button onClick={() => { setCrisisGuidePrompt(false); setShowCrisisGuide(true); }} style={{ flex: 1, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>はい</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* クライシスプラン書き方ガイド */}
+      {showCrisisGuide && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400 }}
+          onClick={() => setShowCrisisGuide(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: COLORS.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 0" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: COLORS.border }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px 8px" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>クライシスプランの書き方ガイド</div>
+              <button onClick={() => setShowCrisisGuide(false)}
+                style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 4, lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "0 20px 32px", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${COLORS.border}` }}>
+                クライシスプランは、調子が悪くなったときに「どうすればいいか」をあらかじめ整理しておくためのものです。調子が良いときに作っておきましょう。
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.accent }} />
+                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Safe（安定しているとき）</div>
+                </div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 8 }}>自分が安定しているときの状態を書いておきます。</div>
+                <div style={{ background: COLORS.bg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: COLORS.text, lineHeight: 1.8 }}>
+                  例：「夜ちゃんと眠れている」「食欲がある」「趣味を楽しめている」「人と普通に話せる」
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#e0a855" }} />
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#e0a855" }}>Caution（注意が必要なとき）</div>
+                </div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 8 }}>調子が崩れるきっかけ（トリガー）と、注意サインを書きます。それぞれに対処法も書いておくと安心です。</div>
+                <div style={{ background: COLORS.bg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: COLORS.text, lineHeight: 1.8, marginBottom: 8 }}>
+                  トリガー例：「残業が続く」「人間関係のトラブル」「季節の変わり目」
+                </div>
+                <div style={{ background: COLORS.bg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: COLORS.text, lineHeight: 1.8 }}>
+                  注意サイン例：「眠れなくなる」「食欲が落ちる」「イライラしやすい」「涙が出る」
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.danger }} />
+                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.danger }}>Crisis（危機的なとき）</div>
+                </div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 8 }}>危機的な状態のサインと、そのときに連絡する人を書いておきます。</div>
+                <div style={{ background: COLORS.bg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: COLORS.text, lineHeight: 1.8, marginBottom: 8 }}>
+                  サイン例：「自分を傷つけたい気持ちが出る」「何日も眠れない」「外に出られない」
+                </div>
+                <div style={{ background: COLORS.bg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: COLORS.text, lineHeight: 1.8 }}>
+                  連絡先例：「主治医（◯◯病院）」「家族」「いのちの電話 0120-783-556」
+                </div>
+              </div>
+              <div style={{ background: COLORS.bg, borderRadius: 10, padding: "12px 14px", marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7 }}>
+                  完璧に書く必要はありません。思いつくものから少しずつ書き足していきましょう。主治医や支援者と一緒に作ると、より安心できるプランになります。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 削除確認ダイアログ */}
       {deleteTargetId && (
