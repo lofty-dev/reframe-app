@@ -1926,8 +1926,10 @@ export default function App() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => {
               if (tellPeople.length === 1) {
-                setBridgePersonId(tellPeople[0].id);
+                const p = tellPeople[0];
+                setBridgePersonId(p.id);
                 setBridgeMemoInput("");
+                setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(p.id) && !m.completed).map(m => m.id)));
                 setView("bridge");
               } else {
                 setView("bridgePerson");
