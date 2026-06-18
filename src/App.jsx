@@ -6,7 +6,11 @@ import { CSS } from "@dnd-kit/utilities";
 
 const THEME_KEY = "stride_theme";
 
+const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満": "6〜7時間" };
+const sleepLabel = (s) => SLEEP_DISPLAY[s] || s;
+
 const ANNOUNCEMENTS = [
+  { date: "2026/06/18", content: "チェックインの睡眠時間の選択肢表示を変更（4〜5時間 / 6〜7時間）" },
   { date: "2026/06/18", content: "ご要望のあった過去のチェックイン編集機能を追加" },
   { date: "2026/06/17", content: "Android環境でのバグ修正" },
   { date: "2026/06/17", content: "Bridge Sessionの表示不具合を修正" },
@@ -1824,7 +1828,7 @@ export default function App() {
                   </div>
                   <div style={{ fontSize: 12, color: COLORS.textMuted, display: "flex", gap: 10 }}>
                     {todayCheckin.condition && <span>{todayCheckin.condition}</span>}
-                    {todayCheckin.sleep && <span>睡眠 {todayCheckin.sleep}</span>}
+                    {todayCheckin.sleep && <span>睡眠 {sleepLabel(todayCheckin.sleep)}</span>}
                   </div>
                   {todayCheckin.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4 }}>"{todayCheckin.memo}"</div>}
                 </div>
@@ -4403,7 +4407,7 @@ export default function App() {
                             </div>
                             <div style={{ display: "flex", gap: 10, fontSize: 11, color: COLORS.textMuted }}>
                               {data.condition && <span>{data.condition}</span>}
-                              {data.sleep && <span>睡眠 {data.sleep}</span>}
+                              {data.sleep && <span>睡眠 {sleepLabel(data.sleep)}</span>}
                             </div>
                             {data.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4, lineHeight: 1.5 }}>「{data.memo}」</div>}
                           </div>
@@ -4478,7 +4482,7 @@ export default function App() {
               {["4時間未満", "4〜6時間未満", "6〜8時間未満", "8時間以上"].map((s) => (
                 <button key={s} onClick={() => setCheckinDraft({ ...checkinDraft, sleep: checkinDraft.sleep === s ? null : s })}
                   style={{ padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${checkinDraft.sleep === s ? COLORS.accent : COLORS.border}`, background: checkinDraft.sleep === s ? COLORS.accentSoft : COLORS.surface, color: checkinDraft.sleep === s ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: checkinDraft.sleep === s ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
-                  {s}
+                  {sleepLabel(s)}
                 </button>
               ))}
             </div>
@@ -4545,7 +4549,7 @@ export default function App() {
                 {["4時間未満", "4〜6時間未満", "6〜8時間未満", "8時間以上"].map((s) => (
                   <button key={s} onClick={() => setCheckinEditDraft({ ...checkinEditDraft, sleep: checkinEditDraft.sleep === s ? null : s })}
                     style={{ padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${checkinEditDraft.sleep === s ? COLORS.accent : COLORS.border}`, background: checkinEditDraft.sleep === s ? COLORS.accentSoft : COLORS.surface, color: checkinEditDraft.sleep === s ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: checkinEditDraft.sleep === s ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
-                    {s}
+                    {sleepLabel(s)}
                   </button>
                 ))}
               </div>
