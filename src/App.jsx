@@ -38,6 +38,7 @@ export default function App() {
   const [onboarded, setOnboardedState] = useState(hasOnboarded);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [onboardSlide, setOnboardSlide] = useState(0);
+  const [cookieNoticed, setCookieNoticed] = useState(() => { try { return localStorage.getItem("stride_cookie_noticed") === "true"; } catch { return false; } });
 
   const [newSituation, setNewSituation] = useState("");
   const [newYear, setNewYear] = useState(t.year);
@@ -612,12 +613,12 @@ export default function App() {
           <div style={{ marginBottom: 40 }}>
             <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Privacy Policy</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>プライバシーポリシー</div>
-            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年5月</div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年6月</div>
             {[
               { title: "1. はじめに", body: "Stride（以下「本アプリ」）は、ユーザーのプライバシーを尊重し、個人情報の適切な取り扱いに努めます。" },
               { title: "2. 収集する情報", body: "■ユーザーが入力する情報\n・気分・体調・睡眠に関する記録\n・ストレスや出来事に関するメモ\n・認知再構成・問題解決技法・コーピングに関する記録\n・クライシスプランの内容\n・その他、アプリ内で入力したすべての情報\n\n■自動的に収集される情報\n本アプリはGoogle Analyticsを使用しています。アクセス状況（ページビュー数・滞在時間など）を収集・分析しています。Googleのプライバシーポリシーが適用されます。" },
-              { title: "3. 情報の保存場所", body: "ユーザーが入力した情報は、ご利用のデバイスのブラウザ内（localStorage等）にのみ保存されます。開発者を含む第三者のサーバーには送信・保存されません。\n\n※ブラウザのデータを削除した場合、記録は復元できません。エクスポート機能でのバックアップを推奨します。" },
-              { title: "4. 情報の第三者提供", body: "本アプリは、ユーザーの情報を第三者に販売・提供・開示しません。\nただし、以下の外部サービスを利用しています：\n・Googleフォーム（フィードバック収集）：入力情報はGoogleのサービスを通じて処理されます\n・Google Analytics（アクセス解析）：Googleのプライバシーポリシーが適用されます" },
+              { title: "3. 情報の保存場所", body: "ユーザーが入力した情報は、ご利用のデバイスのブラウザ内（localStorage等）にのみ保存され、ユーザーの同意なく外部のサーバーに送信されることはありません。開発者を含む第三者が、ユーザーの記録内容を閲覧することはできません。\n\n※将来的に、AIによる分析機能（任意・有料）を追加する場合があります。この機能を利用する際は、分析のために入力データの一部が外部サーバーに送信されますが、これはご本人がこの機能を有効にし、明示的に同意した場合に限ります。同意しない限り、データが外部に送信されることはありません。\n\n※ブラウザのデータを削除した場合、記録は復元できません。エクスポート機能でのバックアップを推奨します。" },
+              { title: "4. 情報の第三者提供", body: "本アプリは、ユーザーの情報を第三者に販売・提供・開示しません。ただし、以下の外部サービスを利用しています：\n\n・Googleフォーム（フィードバック収集）：入力情報はGoogleのサービスを通じて処理されます\n\n・Google Analytics（アクセス解析）：Googleのプライバシーポリシーが適用されます\n\n・Google Search Console（検索流入の分析）：検索エンジン経由のアクセス状況を把握するために使用します。Googleのプライバシーポリシーが適用されます\n\n・（将来）AI分析機能：本機能を有効にした場合に限り、分析処理のために外部のAIサービスへ入力データの一部が送信されます。本機能はオプトイン（任意）であり、有効にしない限りデータが送信されることはありません" },
               { title: "5. Cookie・ローカルストレージについて", body: "アプリの機能提供のためにlocalStorageを使用します。広告目的では使用しません。" },
               { title: "6. プライバシーポリシーの変更", body: "本ポリシーは必要に応じて更新されます。重要な変更はアプリ内でお知らせします。" },
               { title: "7. お問い合わせ", body: "アプリ内のフィードバックフォームよりご連絡ください。" },
@@ -635,7 +636,7 @@ export default function App() {
           <div style={{ marginBottom: 40 }}>
             <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Disclaimer</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>免責事項</div>
-            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年5月</div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>Stride｜最終更新日：2026年6月</div>
             {[
               { title: "1. 医療行為ではありません", body: "本アプリは、セルフマネジメントおよび自己理解を支援するためのツールです。医療行為、診断、治療、またはその代替を目的としたものではありません。精神的・身体的な健康上の問題については、必ず専門家にご相談ください。" },
               { title: "2. 効果の保証はしません", body: "本アプリの利用によって、特定の効果・改善・結果が得られることを保証するものではありません。使用はユーザー自身の判断と責任において行ってください。" },
@@ -4828,6 +4829,19 @@ export default function App() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Cookie通知バナー */}
+      {!cookieNoticed && (
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#1a1d2e", borderTop: `1px solid ${COLORS.border}`, padding: "16px 18px", zIndex: 500, boxSizing: "border-box" }}>
+          <div style={{ fontSize: 13, color: "#fff", lineHeight: 1.7, marginBottom: 12 }}>
+            本アプリはGoogle Analyticsによるアクセス解析を使用しています。詳しくは<button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "#38bdf8", fontSize: 13, cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}>プライバシーポリシー</button>をご覧ください。
+          </div>
+          <button onClick={() => { try { localStorage.setItem("stride_cookie_noticed", "true"); } catch {} setCookieNoticed(true); }}
+            style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: "#38bdf8", color: "#0f1117", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            OK
+          </button>
         </div>
       )}
 
