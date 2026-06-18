@@ -156,6 +156,8 @@ export const EMOTION_LIST = [
 
 export const INTENSITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
+export const TELL_PERSON_TYPES = ["主治医", "精神保健福祉士", "カウンセラー", "その他"];
+
 export const STRESS_CATEGORIES = ["人間関係", "仕事・作業", "健康・体調", "お金", "将来・不安", "家族", "その他"];
 export const STRESS_INTENSITIES = ["軽い", "中", "重い"];
 export const COG_PATTERNS = [
