@@ -225,7 +225,7 @@ export default function App() {
       else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
       else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
       else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
-      else if (view === "mindfulness") { setView("tools"); setActiveTab("tools"); }
+      else if (view === "mindfulness") { if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); } setView("tools"); setActiveTab("tools"); }
       else if (view === "new") { setView("list"); }
       else if (view === "detail") { setView("list"); setEditing(false); }
       else if (view === "copingSelect") { setView("approach"); }
@@ -254,6 +254,18 @@ export default function App() {
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
   useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); } }, [showPrivacy]);
+
+  useEffect(() => {
+    if (view !== "mindfulness" && mfRunning) {
+      if (mfTimerRef) clearInterval(mfTimerRef);
+      try {
+        if (window._mfGain) window._mfGain.gain.exponentialRampToValueAtTime(0.001, window._mfAudioCtx.currentTime + 0.5);
+        setTimeout(() => { try { window._mfSource?.stop(); window._mfAudioCtx?.close(); } catch(e) {} }, 600);
+      } catch(e) {}
+      setMfRunning(false);
+      setMfRemaining(null);
+    }
+  }, [view]);
 
   const printHtml = (html) => {
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
@@ -368,7 +380,7 @@ export default function App() {
 
   const saveCheckin = () => {
     if (!checkinDraft.mood) return;
-    const entry = { id: Date.now(), date: toDateStr(t.year, t.month, t.day), ...checkinDraft };
+    const entry = { id: todayCheckin ? todayCheckin.id : Date.now(), date: toDateStr(t.year, t.month, t.day), ...checkinDraft };
     setCheckins([entry, ...checkins.filter((c) => c.date !== entry.date)]);
     setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" });
     setView("home");
@@ -4585,7 +4597,7 @@ export default function App() {
               <button onClick={() => setTellPersonDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
                 キャンセル
               </button>
-              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellPersonDeleteId(null); }}
+              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellMemos(prev => prev.map(m => ({ ...m, personIds: m.personIds.filter(pid => pid !== tellPersonDeleteId), checks: Object.fromEntries(Object.entries(m.checks).filter(([k]) => k !== String(tellPersonDeleteId))) }))); setTellPersonDeleteId(null); }}
                 style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
                 削除する
               </button>
