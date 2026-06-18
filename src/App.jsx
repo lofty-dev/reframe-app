@@ -1,846 +1,14 @@
 import { useState, useEffect } from "react";
 import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
-const THEME_KEY = "stride_theme";
-
-const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満": "6〜7時間" };
-const sleepLabel = (s) => SLEEP_DISPLAY[s] || s;
-
-const ANNOUNCEMENTS = [
-  { date: "2026/06/18", content: "チェックインの睡眠時間の選択肢表示を変更（4〜5時間 / 6〜7時間）" },
-  { date: "2026/06/18", content: "ご要望のあった過去のチェックイン編集機能を追加" },
-  { date: "2026/06/17", content: "Android環境でのバグ修正" },
-  { date: "2026/06/17", content: "Bridge Sessionの表示不具合を修正" },
-];
-
-const COLORS_DARK = {
-  bg: "#0f1117",
-  surface: "#1a1d27",
-  surfaceWarm: "#1e2132",
-  border: "#2a2d3e",
-  accent: "#38bdf8",
-  accentSoft: "#0c2a3a",
-  accentText: "#38bdf8",
-  text: "#e8eaf0",
-  textMuted: "#6b7280",
-  success: "#38bdf8",
-  successBg: "#0c2a3a",
-  successText: "#38bdf8",
-  hint: "#151929",
-  hintBorder: "#2a2d3e",
-  hintText: "#8b98b0",
-  danger: "#f87171",
-  psAccent: "#818cf8",
-};
-
-const COLORS_LIGHT = {
-  bg: "#f5f7fa",
-  surface: "#ffffff",
-  surfaceWarm: "#f8fafc",
-  border: "#e2e8f0",
-  accent: "#0ea5e9",
-  accentSoft: "#e0f2fe",
-  accentText: "#0284c7",
-  text: "#1a1d2e",
-  textMuted: "#6b7280",
-  success: "#10b981",
-  successBg: "#dcfce7",
-  successText: "#10b981",
-  hint: "#f0f4ff",
-  hintBorder: "#c7d2fe",
-  hintText: "#475569",
-  danger: "#ef4444",
-  psAccent: "#6366f1",
-};
-
-const _initTheme = (() => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } })();
-let COLORS = { ...(_initTheme === "light" ? COLORS_LIGHT : COLORS_DARK) };
-
-const CBT3_STEPS = [
-  {
-    id: "situation3",
-    label: "状況",
-    question: "どんな状況だった？",
-    placeholder: "例）会議で発言しようとしたら、上司に話を遮られた",
-    hint: "いつ、どこで、何が起きたかを具体的に書いてみよう。感情や解釈は後でOK。",
-  },
-  {
-    id: "emotion3",
-    label: "感情",
-    question: "そのとき、どんな感情があった？強さは？",
-    placeholder: "例）恥ずかしさ 70%、怒り 50%",
-    hint: "感情に名前をつけて、強さを0〜100%で書いてみよう。複数あってもOK。",
-  },
-  {
-    id: "autoThought3",
-    label: "自動思考",
-    question: "そのとき頭に浮かんだ考えは？",
-    placeholder: "例）自分の意見は価値がないんだ、また同じことが起きる",
-    hint: "出来事の直後に頭に浮かんだ言葉をそのまま書いてみよう。評価しなくていい。\nまず状況と感情と思考を書き出すことで、自分のパターンが見えてくるよ。",
-  },
-  {
-    id: "cogPattern3",
-    label: "認知のクセ",
-    question: "この思考、どんな認知のクセだと思う？",
-    placeholder: "",
-    hint: "当てはまると思うものを選んでみよう。複数あってもOK。「これかも」くらいで大丈夫。選ばなくてもOK。",
-  },
-];
-
-const CBT_STEPS = [
-  {
-    id: "situation7",
-    label: "状況",
-    question: "どんな状況だった？",
-    placeholder: "例）会議で発言しようとしたら、上司に話を遮られた。いつ、どこで、誰と、何が起きたかを具体的に",
-    hint: "ストレス記録に書いたことをもとに、もう少し具体的に書いてみよう。\nいつ・どこで・誰と・何が起きたか、を意識すると整理しやすいよ。",
-  },
-  {
-    id: "emotion",
-    label: "感情",
-    question: "そのとき、どんな感情があった？強さは？",
-    placeholder: "例）不安 80%、悲しみ 60%",
-    hint: "感情には名前をつけてみよう。「不安」「悲しみ」「怒り」「恥ずかしさ」など。\n強さを0〜100%で表すと、後で変化を比べやすくなるよ。複数あってもOK。",
-  },
-  {
-    id: "autoThought",
-    label: "自動思考",
-    question: "頭に浮かんだ考えを書き出そう",
-    placeholder: "例）自分はダメな人間だ",
-    hint: "出来事のあとに、瞬間的に頭に浮かんだ考えを一つずつ書いてみよう。\n「〜に違いない」「〜のせいだ」という形になることが多い。複数あってもOK。",
-  },
-  {
-    id: "cogPattern",
-    label: "認知のクセ",
-    question: "この思考、どんな認知のクセだと思う？",
-    placeholder: "",
-    hint: "当てはまると思うものを選んでみよう。複数あってもOK。「これかも」くらいで大丈夫。選ばなくてもOK。",
-  },
-  {
-    id: "evidence_for",
-    label: "根拠（そう思う理由）",
-    question: "その考えを支持する事実は？",
-    placeholder: "例）実際にミスをした、何度か注意された",
-    hint: "「なぜそう思うのか」を事実ベースで書いてみよう。\n感情や憶測ではなく、実際に起きたことや言われたことを書くのがポイント。",
-  },
-  {
-    id: "evidence_against",
-    label: "反証（別の見方）",
-    question: "その考えに反する事実や、別の見方は？",
-    placeholder: "例）今まで褒められたこともある、今回は初めてのタスクだった",
-    hint: "自動思考に反する事実や、別の可能性を探してみよう。\n「友人が同じ状況だったら何と言う？」と考えると出てきやすいよ。完璧じゃなくていい。",
-  },
-  {
-    id: "balanced",
-    label: "バランス思考",
-    question: "両方を踏まえると、どう考えられる？",
-    placeholder: "例）ミスはしたけど、まだ学んでいる段階だ。全否定するほどのことじゃない",
-    hint: "根拠と反証の両方を見たうえで、より現実的な考え方を書いてみよう。\n「完璧」じゃなくていい。「〜だけど、〜とも言える」という形になることが多い。",
-  },
-  {
-    id: "reEmotion",
-    label: "感情の変化",
-    question: "今の感情は？強さはどう変わった？",
-    placeholder: "例）不安 40%、少し落ち着いた",
-    hint: "最初に書いた感情と比べて、強さはどう変わった？\n大きく変わらなくても大丈夫。少しでも和らいでいれば、それが認知再構成の効果だよ。",
-  },
-];
-
-const EMOTION_LIST = [
-  { category: "ポジティブ", items: ["うれしい", "楽しい", "安心", "満足", "希望"] },
-  { category: "不安・恐れ", items: ["不安", "恐れ", "心配", "緊張", "パニック"] },
-  { category: "悲しみ", items: ["悲しい", "落ち込み", "絶望", "孤独", "寂しい"] },
-  { category: "怒り", items: ["怒り", "イライラ", "不満", "むかつき", "嫌悪"] },
-  { category: "恥・罪悪感", items: ["恥ずかしい", "罪悪感", "後悔", "自己嫌悪"] },
-  { category: "その他", items: ["驚き", "混乱", "戸惑い", "疲れ", "無力感", "虚しい"] },
-];
-
-const INTENSITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-
-const EmotionInput = ({ value, onChange }) => {
-  const allEmotionNames = EMOTION_LIST.flatMap(g => g.items);
-
-  const parseValue = (val) => {
-    if (!val) return { selected: [], freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
-    const items = val.split("、").map(s => {
-      const match = s.trim().match(/^(.+?)\s*(\d+)%$/);
-      if (!match) return null;
-      return { name: match[1].trim(), intensity: parseInt(match[2]) };
-    }).filter(Boolean);
-    if (items.length === 0) return { selected: [], freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
-    const isSelect = items.every(i => allEmotionNames.includes(i.name));
-    if (isSelect) return { selected: items, freeInputs: [{ name: "", intensity: 50 }], mode: "select" };
-    return { selected: [], freeInputs: items.length > 0 ? items : [{ name: "", intensity: 50 }], mode: "free" };
-  };
-
-  const initial = parseValue(value);
-  const [mode, setMode] = useState(initial.mode);
-  const [selected, setSelected] = useState(initial.selected);
-  const [freeInputs, setFreeInputs] = useState(initial.freeInputs);
-
-  const toText = (items) => items.filter(i => i.name).map(i => `${i.name} ${i.intensity}%`).join("、");
-
-  const handleSelectEmotion = (name) => {
-    const exists = selected.find(s => s.name === name);
-    let next;
-    if (exists) {
-      next = selected.filter(s => s.name !== name);
-    } else {
-      next = [...selected, { name, intensity: 50 }];
-    }
-    setSelected(next);
-    onChange(toText(next));
-  };
-
-  const handleSelectIntensity = (name, intensity) => {
-    const next = selected.map(s => s.name === name ? { ...s, intensity } : s);
-    setSelected(next);
-    onChange(toText(next));
-  };
-
-  const handleFreeChange = (idx, field, val) => {
-    const next = freeInputs.map((f, i) => i === idx ? { ...f, [field]: val } : f);
-    setFreeInputs(next);
-    onChange(toText(next));
-  };
-
-  return (
-    <div>
-      {/* モード切り替え */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["select", "free"].map((m) => (
-          <button key={m} onClick={() => setMode(m)}
-            style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${mode === m ? COLORS.accent : COLORS.border}`, background: mode === m ? COLORS.accentSoft : COLORS.surface, color: mode === m ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            {m === "select" ? "選択式" : "自由記入"}
-          </button>
-        ))}
-      </div>
-
-      {mode === "select" && (
-        <div>
-          {EMOTION_LIST.map((group) => (
-            <div key={group.category} style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, marginBottom: 8 }}>{group.category}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {group.items.map((name) => {
-                  const sel = selected.find(s => s.name === name);
-                  return (
-                    <div key={name}>
-                      <button onClick={() => handleSelectEmotion(name)}
-                        style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${sel ? COLORS.accent : COLORS.border}`, background: sel ? COLORS.accentSoft : COLORS.surface, color: sel ? COLORS.accent : COLORS.textMuted, fontSize: 13, fontWeight: sel ? 700 : 400, cursor: "pointer" }}>
-                        {name}
-                      </button>
-                      {sel && (
-                        <select value={sel.intensity} onChange={(e) => handleSelectIntensity(name, parseInt(e.target.value))}
-                          style={{ ...selStyle(), marginLeft: 6, padding: "4px 6px", borderRadius: 6, fontSize: 12, width: 70, background: COLORS.surface, color: COLORS.accent, border: `1px solid ${COLORS.accent}` }}>
-                          {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
-                        </select>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-          {selected.length > 0 && (
-            <div style={{ marginTop: 12, padding: "10px 14px", background: COLORS.accentSoft, borderRadius: 8, fontSize: 13, color: COLORS.accent }}>
-              {toText(selected)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {mode === "free" && (
-        <div>
-          {freeInputs.map((f, idx) => (
-            <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-              <input
-                type="text"
-                placeholder="例）不安"
-                value={f.name}
-                onChange={(e) => handleFreeChange(idx, "name", e.target.value)}
-                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
-              />
-              <select value={f.intensity} onChange={(e) => handleFreeChange(idx, "intensity", parseInt(e.target.value))}
-                style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 6px", outline: "none", fontFamily: "inherit", width: 70, flexShrink: 0, boxSizing: "border-box" }}>
-                {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
-              </select>
-              {freeInputs.length > 1 && (
-                <button onClick={() => { const next = freeInputs.filter((_, i) => i !== idx); setFreeInputs(next); onChange(toText(next)); }}
-                  style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: 0 }}>×</button>
-              )}
-            </div>
-          ))}
-          <button onClick={() => setFreeInputs([...freeInputs, { name: "", intensity: 50 }])}
-            style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
-            ＋ 感情を追加する
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const AutoThoughtInput = ({ value, onChange }) => {
-  const parseThoughts = (val) => {
-    if (!val) return [{ id: Date.now(), text: "" }];
-    const items = val.split("\n").filter(s => s.trim());
-    return items.length > 0 ? items.map((t, i) => ({ id: i, text: t })) : [{ id: 0, text: "" }];
-  };
-
-  const [thoughts, setThoughts] = useState(parseThoughts(value));
-
-  const toText = (items) => items.filter(i => i.text.trim()).map(i => i.text.trim()).join("\n");
-
-  const handleChange = (id, text) => {
-    const next = thoughts.map(t => t.id === id ? { ...t, text } : t);
-    setThoughts(next);
-    onChange(toText(next));
-  };
-
-  const addThought = () => {
-    setThoughts([...thoughts, { id: Date.now(), text: "" }]);
-  };
-
-  const removeThought = (id) => {
-    const next = thoughts.filter(t => t.id !== id);
-    setThoughts(next);
-    onChange(toText(next));
-  };
-
-  return (
-    <div>
-      {thoughts.map((t, idx) => (
-        <div key={t.id} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
-          <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
-          <textarea
-            rows={2}
-            style={{ ...inpStyle(), flex: 1, resize: "none" }}
-            placeholder="例）自分はダメな人間だ"
-            value={t.text}
-            onChange={(e) => handleChange(t.id, e.target.value)}
-          />
-          {thoughts.length > 1 && (
-            <button onClick={() => removeThought(t.id)}
-              style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: "8px 0", opacity: 0.5 }}>×</button>
-          )}
-        </div>
-      ))}
-      <button onClick={addThought}
-        style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
-        ＋ 自動思考を追加する
-      </button>
-    </div>
-  );
-};
-
-const STRESS_CATEGORIES = ["人間関係", "仕事・作業", "健康・体調", "お金", "将来・不安", "家族", "その他"];
-const STRESS_INTENSITIES = ["軽い", "中", "重い"];
-const COG_PATTERNS = [
-  { label: "白黒思考", desc: "物事を0か100かで考えてしまう" },
-  { label: "べき思考", desc: "〜すべき・〜しなければと強く思い込む" },
-  { label: "読心術", desc: "相手の気持ちを根拠なく決めつける" },
-  { label: "破局視", desc: "悪い結果を根拠なく予測する" },
-  { label: "感情的決めつけ", desc: "気分や感情を事実として捉える" },
-  { label: "過度の一般化", desc: "一度の出来事を全てに当てはめる" },
-  { label: "拡大視", desc: "失敗や欠点を必要以上に大きく捉える" },
-  { label: "縮小視", desc: "良いことを必要以上に小さく捉える" },
-  { label: "自己関連付け", desc: "関係ないことを自分のせいにする" },
-  { label: "その他", desc: "" },
-];
-
-const PS_STEPS = [
-  {
-    id: "situation",
-    label: "問題状況",
-    question: "今、何が気になっていますか？",
-    placeholder: "例）仕事のミスが続いていて、上司との関係も悪くなっている気がする",
-    hint: "うまくまとめようとしなくて大丈夫。頭にあることをそのまま書いてみよう。",
-  },
-  {
-    id: "breakdown",
-    label: "問題の細分化",
-    question: "具体的にどこが困っていますか？小さく分けて書いてみよう",
-    placeholder: "例）\n・ミスの原因が自分でわからない\n・上司への報告が怖い\n・同じ作業に時間がかかりすぎる",
-    hint: "「〜がつらい」ではなく「〜ができない」「〜がわからない」という形で書くと分けやすいよ。3つくらい出せると十分。",
-  },
-  {
-    id: "target",
-    label: "取り組む問題",
-    question: "その中で、今一番対処できそうなものはどれですか？",
-    placeholder: "例）ミスの原因が自分でわからない、という問題に取り組む",
-    hint: "「解決できそう」じゃなくて「対処できそう」で選ぼう。小さくても手をつけられるものがベスト。",
-  },
-  {
-    id: "benefit",
-    label: "解決のメリット",
-    question: "それが解決したら、どんないいことがありそう？",
-    placeholder: "例）ミスが減れば上司への報告も怖くなくなる。少し自信が持てるかも",
-    hint: "大きなことじゃなくていい。「少し楽になる」「気持ちが軽くなる」でも十分。やる気のタネになるよ。",
-  },
-  {
-    id: "solutions",
-    label: "解決策を出す",
-    question: "どんな方法が考えられますか？思いつくだけ書いてみよう",
-    placeholder: "例）\n・作業前にメモで手順を確認する（効果80% / できそう90%）\n・上司に確認のタイミングを決めてもらう（効果70% / できそう60%）\n・同僚にやり方を聞いてみる（効果60% / できそう70%）",
-    hint: "「効果的か」「実際にできそうか」も一緒に書けると選びやすくなるよ。パーセントでなくても○△×でもOK。",
-  },
-  {
-    id: "selectPlan",
-    label: "解決策を選ぶ",
-    question: "まず何から試しますか？",
-    placeholder: "",
-    hint: "「完璧にできそう」じゃなくて「少し試せそう」で選ぼう。小さく始めるのがコツ。",
-  },
-  {
-    id: "planWhen",
-    label: "実行タイミング",
-    question: "具体的にいつやりますか？",
-    placeholder: "例）明日の朝、作業前に5分だけやってみる",
-    hint: "「完璧にやる」じゃなく「実験としてやってみる」くらいの気持ちで。小さく始めるのがコツ。",
-  },
-];
-
-const todayStr = () => {
-  const d = new Date();
-  return {
-    year: String(d.getFullYear()),
-    month: String(d.getMonth() + 1).padStart(2, "0"),
-    day: String(d.getDate()).padStart(2, "0"),
-  };
-};
-
-const toDateStr = (y, m, d) => `${y}-${m}-${d}`;
-const formatDate = (dateStr) => {
-  const [, m, d] = dateStr.split("-");
-  return `${parseInt(m)}月${parseInt(d)}日`;
-};
-const daysInMonth = (y, m) => new Date(parseInt(y), parseInt(m), 0).getDate();
-
-const selStyle = () => ({
-  flex: 1,
-  background: COLORS.surface,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: 10,
-  color: COLORS.text,
-  fontSize: 15,
-  padding: "12px 8px",
-  outline: "none",
-  fontFamily: "inherit",
-  appearance: "none",
-  WebkitAppearance: "none",
-  textAlign: "center",
-});
-
-const inpStyle = () => ({
-  width: "100%",
-  background: COLORS.bg,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: 10,
-  color: COLORS.text,
-  fontSize: 15,
-  padding: "12px 14px",
-  outline: "none",
-  resize: "vertical",
-  fontFamily: "inherit",
-  lineHeight: 1.7,
-  boxSizing: "border-box",
-});
-
-const BottomNav = ({ onBack, onHome }) => (
-  <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
-    <button onClick={onBack || onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
-      <IconArrowLeft size={16} />戻る
-    </button>
-    <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
-      <IconHome size={16} />ホーム
-    </button>
-  </div>
-);
-
-const TAB_VIEWS = {
-  home: "home",
-  records: "records",
-  tools: "tools",
-  medical: "medicalTab",
-};
-
-const BottomTabBar = ({ activeTab, onTabChange }) => {
-  const tabs = [
-    { id: "home", Icon: IconHome, label: "ホーム" },
-    { id: "records", Icon: IconPencil, label: "記録" },
-    { id: "tools", Icon: IconBrain, label: "ツール" },
-    { id: "medical", Icon: IconStethoscope, label: "診察" },
-  ];
-  return (
-    <div className="no-print" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, display: "flex", zIndex: 200, paddingBottom: "env(safe-area-inset-bottom)" }}>
-      {tabs.map(({ id, Icon, label }) => {
-        const active = activeTab === id;
-        const color = active ? COLORS.accent : COLORS.textMuted;
-        return (
-          <button key={id} onClick={() => onTabChange(id)}
-            style={{ flex: 1, background: "none", border: "none", padding: "10px 0 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <Icon size={20} color={color} />
-            <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
-            {active && <div style={{ width: 20, height: 2, borderRadius: 1, background: COLORS.accent }} />}
-          </button>
-        );
-      })}
-    </div>
-  );
-};
-
-const DateSelector = ({ year, month, day, onYear, onMonth, onDay }) => {
-  const yearOptions = ["2025", "2026", "2027"];
-  const monthOptions = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
-  const dayOptions = Array.from({ length: daysInMonth(year, month) }, (_, i) => String(i + 1).padStart(2, "0"));
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <select value={year} onChange={(e) => onYear(e.target.value)} style={selStyle()}>
-        {yearOptions.map((y) => <option key={y} value={y}>{y}年</option>)}
-      </select>
-      <select value={month} onChange={(e) => { onMonth(e.target.value); if (parseInt(day) > daysInMonth(year, e.target.value)) onDay("01"); }} style={selStyle()}>
-        {monthOptions.map((m) => <option key={m} value={m}>{parseInt(m)}月</option>)}
-      </select>
-      <select value={day} onChange={(e) => onDay(e.target.value)} style={selStyle()}>
-        {dayOptions.map((d) => <option key={d} value={d}>{parseInt(d)}日</option>)}
-      </select>
-    </div>
-  );
-};
-
-const STORAGE_KEY = "reframe_records";
-const CHECKIN_KEY = "reframe_checkins";
-const COPING_KEY = "reframe_copings";
-const CRISIS_KEY = "stride_crisis";
-const ACHIEVEMENTS_KEY = "stride_achievements";
-const MEMO_KEY = "stride_memo";
-
-const TELL_PEOPLE_KEY = "stride_tell_people";
-const TELL_MEMOS_KEY = "stride_tell_memos";
-const BRIDGE_SETTINGS_KEY = "stride_bridge_settings";
-const BRIDGE_MEMOS_KEY = "stride_bridge_memos";
-
-const DEFAULT_BRIDGE_SETTINGS = { showTellMemos: true, showMoodGraph: true, showSleep: true, showStress: true, showAchievement: true };
-
-const loadBridgeSettings = () => {
-  try { const s = localStorage.getItem(BRIDGE_SETTINGS_KEY); if (s) return { ...DEFAULT_BRIDGE_SETTINGS, ...JSON.parse(s) }; } catch (e) {}
-  return { ...DEFAULT_BRIDGE_SETTINGS };
-};
-const saveBridgeSettings = (d) => { try { localStorage.setItem(BRIDGE_SETTINGS_KEY, JSON.stringify(d)); } catch (e) {} };
-
-const loadBridgeMemos = () => {
-  try { const s = localStorage.getItem(BRIDGE_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
-  return [];
-};
-const saveBridgeMemos = (d) => { try { localStorage.setItem(BRIDGE_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
-
-const loadTellPeople = () => {
-  try { const s = localStorage.getItem(TELL_PEOPLE_KEY); if (s) return JSON.parse(s); } catch (e) {}
-  return [];
-};
-const saveTellPeople = (d) => { try { localStorage.setItem(TELL_PEOPLE_KEY, JSON.stringify(d)); } catch (e) {} };
-
-const loadTellMemos = () => {
-  try { const s = localStorage.getItem(TELL_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
-  return [];
-};
-const saveTellMemos = (d) => { try { localStorage.setItem(TELL_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
-
-const TELL_PERSON_TYPES = ["主治医", "精神保健福祉士", "カウンセラー", "その他"];
-
-const loadMemo = () => {
-  try {
-    const saved = localStorage.getItem(MEMO_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-const saveMemo = (data) => {
-  try { localStorage.setItem(MEMO_KEY, JSON.stringify(data)); } catch (e) {}
-};
-
-const loadAchievements = () => {
-  try {
-    const saved = localStorage.getItem(ACHIEVEMENTS_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-const saveAchievements = (data) => {
-  try { localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(data)); } catch (e) {}
-};
-
-const loadCrisisPlan = () => {
-  try {
-    const saved = localStorage.getItem(CRISIS_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // 新形式かチェック
-      if (Array.isArray(parsed.safe)) return parsed;
-    }
-  } catch (e) {}
-  return {
-    safe: [],
-    caution_triggers: [],
-    caution_signs: [],
-    crisis_signs: [],
-    crisis_contacts: [],
-  };
-};
-
-const saveCrisisPlan = (plan) => {
-  try { localStorage.setItem(CRISIS_KEY, JSON.stringify(plan)); } catch (e) {}
-};
-
-const loadRecords = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-
-const saveRecords = (records) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
-};
-
-const loadCheckins = () => {
-  try {
-    const saved = localStorage.getItem(CHECKIN_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-
-const saveCheckins = (checkins) => {
-  try { localStorage.setItem(CHECKIN_KEY, JSON.stringify(checkins)); } catch (e) {}
-};
-
-const loadCopings = () => {
-  try {
-    const saved = localStorage.getItem(COPING_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
-
-const PWA_KEY = "stride_pwa_prompted";
-const hasPwaPrompted = () => {
-  try { return localStorage.getItem(PWA_KEY) === "true"; } catch (e) { return false; }
-};
-const setPwaPrompted = () => {
-  try { localStorage.setItem(PWA_KEY, "true"); } catch (e) {}
-};
-
-const FEEDBACK_BANNER_KEY = "stride_feedback_banner_dismissed";
-const hasFeedbackBannerDismissed = () => {
-  try { return localStorage.getItem(FEEDBACK_BANNER_KEY) === "true"; } catch (e) { return false; }
-};
-const setFeedbackBannerDismissed = () => {
-  try { localStorage.setItem(FEEDBACK_BANNER_KEY, "true"); } catch (e) {}
-};
-
-const ALL_STORAGE_KEYS = [
-  "reframe_records", "reframe_checkins", "reframe_copings",
-  "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
-  "stride_memo", "stride_tell_people", "stride_tell_memos",
-  "stride_bridge_settings", "stride_bridge_memos",
-];
-
-const exportData = () => {
-  const data = {};
-  ALL_STORAGE_KEYS.forEach((key) => {
-    try { data[key] = JSON.parse(localStorage.getItem(key)); } catch (e) { data[key] = null; }
-  });
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `stride_backup_${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-const importData = (file, onDone) => {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (typeof data !== "object" || data === null || Array.isArray(data)) {
-        onDone("error");
-        return;
-      }
-      let imported = 0;
-      ALL_STORAGE_KEYS.forEach((key) => {
-        if (data[key] === undefined || data[key] === null) return;
-        try {
-          // 往復シリアライズで構造を検証してから保存
-          const serialized = JSON.stringify(data[key]);
-          JSON.parse(serialized);
-          localStorage.setItem(key, serialized);
-          imported++;
-        } catch (_) {
-          // このキーはスキップ
-        }
-      });
-      onDone(imported > 0 ? "ok" : "error");
-    } catch (err) {
-      onDone("error");
-    }
-  };
-  reader.onerror = () => onDone("error");
-  reader.readAsText(file);
-};
-
-const AGREED_KEY = "stride_agreed";
-const ONBOARDED_KEY = "stride_onboarded";
-
-const hasAgreed = () => {
-  try { return localStorage.getItem(AGREED_KEY) === "true"; } catch (e) { return false; }
-};
-const setAgreed = () => {
-  try { localStorage.setItem(AGREED_KEY, "true"); } catch (e) {}
-};
-const hasOnboarded = () => {
-  try { return localStorage.getItem(ONBOARDED_KEY) === "true"; } catch (e) { return false; }
-};
-const setOnboarded = () => {
-  try { localStorage.setItem(ONBOARDED_KEY, "true"); } catch (e) {}
-};
-
-const ONBOARDING_SLIDES = [
-  {
-    Icon: IconLeaf,
-    title: "今日も、一歩ずつ。",
-    desc: "毎日の記録と振り返りで、自分のパターンが見えてくるアプリです。",
-  },
-  {
-    Icon: IconChartLine,
-    title: "自分の状態を知ろう",
-    desc: "気分・体調・睡眠を毎日チェックイン。ストレスや出来事も記録して、自分のパターンを把握しよう。",
-  },
-  {
-    Icon: IconBrain,
-    title: "ストレスに、対処する",
-    desc: "認知再構成・問題解決技法・コーピングで、ストレスと上手に向き合う方法を身につけよう。",
-  },
-  {
-    Icon: IconStethoscope,
-    title: "支援者と、もっとうまく話せる",
-    desc: "伝えたいことを整理して、診察や面談をBridge Sessionでサポート。言いたいことを、ちゃんと伝えよう。",
-  },
-  {
-    Icon: IconNotes,
-    title: "詳しくはガイドへ",
-    desc: "各機能の使い方はホームの「使い方ガイド」からいつでも確認できます。",
-  },
-];
-
-const HELP_CONTENT = {
-  checkinHistory: {
-    title: "チェックイン履歴",
-    purpose: "自分の状態を毎日記録して、気分や体調のパターンを把握するための機能",
-    usage: ["気分を1〜10で記録", "体調・睡眠を選択", "ひとことメモを任意で記入"],
-    points: ["毎日続けることで週次レポートやグラフで自分の波が見えてくる", "完璧に書かなくていい、気分の数字だけでもOK"],
-  },
-  list: {
-    title: "ストレス記録",
-    purpose: "気になった出来事やストレスを記録して、認知再構成・問題解決・コーピングで対処するための機能",
-    usage: ["気になった出来事や状況を記録", "カテゴリ・強度・浮かんだ考えを任意で記入", "記録後にアプローチを選んで対処できる"],
-    points: ["その場で対処できなくてもまず記録だけでもOK", "認知再構成・問題解決は記録後に「続きから」で再開できる", "対処後の振り返りまで書くと完了になる"],
-  },
-  cbt: {
-    title: "認知再構成",
-    purpose: "ストレスを感じたときの自動的な思考パターンに気づき、バランスのとれた見方を見つけるための機能",
-    usage: ["3コラム：感情・自動思考・バランス思考をシンプルに整理", "7コラム：より詳しく、根拠・反証・認知のクセまで掘り下げる", "ストレス記録からアプローチとして選んで使う"],
-    points: ["慣れないうちは3コラムから始めるのがおすすめ", "認知のクセに気づくだけでも十分な効果がある", "途中で止めても「続きから」で再開できる"],
-  },
-  ps: {
-    title: "問題解決技法",
-    purpose: "漠然とした悩みや困りごとを整理して、具体的な行動プランを立てるための機能",
-    usage: ["困りごとを細かく分解して整理", "対処できそうなものを選んで解決策を考える", "いつやるかを決めて行動に移す", "後日、結果と気づきを振り返りとして記録する"],
-    points: ["問題が大きく感じるときほど、小さく分解するのが大事", "完璧な解決策でなくていい、試してみることが大切", "振り返りまで書くと完了になる"],
-  },
-  coping: {
-    title: "コーピングリスト",
-    purpose: "つらいときや気分を切り替えたいときに使える対処法をリスト化して、すぐに実践できるようにするための機能",
-    usage: ["コーピングリストに自分なりの対処法を登録", "難易度・効果で整理してソートできる", "ストレス記録からアプローチとして選ぶか、コーピング一覧から直接実践できる", "実践後に効果を記録して振り返れる"],
-    points: ["調子が悪いときほど考える余裕がないので、事前にリストを充実させておくのがおすすめ", "難易度が低いものから試してみよう", "効果の記録を続けると、自分に合うコーピングがわかってくる"],
-  },
-  achievement: {
-    title: "できたことログ",
-    purpose: "毎日の小さな達成や良かったことを記録して、自己肯定感を育てるための機能",
-    usage: ["今日できたことを自由に記録", "カレンダーで過去の記録を振り返れる", "連続記録日数で継続のモチベーションを確認できる"],
-    points: ["大きなことでなくていい、「朝ごはんを食べた」「外に出られた」でも十分", "調子が悪い日こそ、小さなことを記録してみよう", "積み重ねた記録が自信につながっていく"],
-  },
-  mindfulness: {
-    title: "マインドフルネス",
-    purpose: "今この瞬間に意識を向けて、気持ちを落ち着かせるための機能",
-    usage: ["1・3・5・7・10分から時間を選んでタイマーをスタート", "ホワイトノイズのBGMを流しながら瞑想できる", "終了時にベル音で知らせてくれる"],
-    points: ["慣れないうちは1〜3分から始めるのがおすすめ", "呼吸に意識を向けるだけでOK、うまくやろうとしなくていい", "気分が落ち着かないとき、寝る前のリラックスにも使える"],
-  },
-  crisis: {
-    title: "クライシスプラン",
-    purpose: "調子が悪くなったときに備えて、自分の状態のサインや対処法・連絡先をあらかじめ整理しておくための機能",
-    usage: ["SAFE：安定しているときの自分の状態を記録", "CAUTION：調子が崩れるサインや引き金になることを記録", "CRISIS：危機状態のサインと連絡先を記録", "PDF出力して診察に持参することもできる"],
-    points: ["調子が良いときに作っておくのが大事", "主治医や支援者と一緒に内容を確認するとより効果的", "いざというときにすぐ見られるように、内容を定期的に見直そう"],
-  },
-  tellMemos: {
-    title: "伝えたいことメモ",
-    purpose: "診察や面談で伝えたいことを事前に整理して、言いたいことをちゃんと伝えられるようにするための機能",
-    usage: ["伝えたいことを自由に記入", "誰に伝えるかを登録済みの人物から選ぶ", "診察・面談中に伝えた人にチェックをつける", "チェック後にその人から言われたことを記録できる", "全員チェック済みで完了になる"],
-    points: ["緊張すると言いたいことを忘れがち、事前にメモしておくと安心", "完了したメモは診察等の記録に自動的に反映される", "人物はあらかじめ登録しておくと毎回選ぶだけでOK"],
-  },
-  bridge: {
-    title: "Bridge Session",
-    purpose: "診察や面談の場で、自分の記録を見ながら支援者と話せるようにするための機能",
-    usage: ["誰との話かを選んでSessionを開始", "気分グラフ・睡眠・ストレス記録・伝えたいことメモなど表示する項目をカスタマイズできる", "Session中にその場でメモを取れる", "メモを保存すると伝えたいことメモの回答欄に自動で記録される"],
-    points: ["診察室でそのままスマホを見せながら話せる", "「うまく説明できない」「何を話せばいいかわからない」というときに特に役立つ", "表示項目は自分に合わせてカスタマイズしよう"],
-  },
-  medicalLog: {
-    title: "診察等の記録",
-    purpose: "主治医・精神保健福祉士・カウンセラーなど、支援者ごとのやりとりの履歴を振り返るための機能",
-    usage: ["登録した人物ごとにタブで切り替えて記録を確認", "伝えたいことメモで完了したものが自動的に反映される", "言われたことや伝えたことを時系列で振り返れる"],
-    points: ["別途記録しなくても伝えたいことメモと自動で同期される", "「あのとき何を言われたっけ？」という振り返りに役立つ", "Bridge Sessionのメモも合わせて確認できる"],
-  },
-};
-
-const saveCopings = (copings) => {
-  try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
-};
-
-function SortablePersonItem({ person, onDelete, onEdit }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
-  return (
-    <div ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1,
-        background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12,
-        padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span {...attributes} {...listeners}
-          style={{ cursor: "grab", color: COLORS.textMuted, fontSize: 18, touchAction: "none", userSelect: "none", lineHeight: 1 }}>⠿</span>
-        <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{person.name}</span>
-          <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{person.type}</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 6 }}>
-        <button onClick={() => onEdit(person)}
-          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 12, cursor: "pointer", padding: "4px 10px" }}>
-          編集
-        </button>
-        <button onClick={() => onDelete(person.id)}
-          style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
-          ×
-        </button>
-      </div>
-    </div>
-  );
-}
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, sleepLabel } from "./constants";
+import { todayStr, toDateStr, formatDate, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed } from "./storage";
+import { inpStyle } from "./styles";
+import { BottomNav, BottomTabBar } from "./components/BottomNav";
+import { DateSelector } from "./components/DateSelector";
+import { EmotionInput, AutoThoughtInput } from "./components/EmotionInput";
+import { SortablePersonItem } from "./components/SortablePersonItem";
 
 export default function App() {
   const t = todayStr();
@@ -984,6 +152,13 @@ export default function App() {
   const [bridgeSessionMemoIds, setBridgeSessionMemoIds] = useState(new Set());
   const [bridgeMemoSelectDialog, setBridgeMemoSelectDialog] = useState(null);
 
+  const initBridgeSession = (personId) => {
+    setBridgePersonId(personId);
+    setBridgeMemoInput("");
+    setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(personId) && !m.completed).map(m => m.id)));
+    setView("bridge");
+  };
+
   const dndSensors = useSensors(useSensor(PointerSensor));
 
   const [visibleCount, setVisibleCount] = useState(10);
@@ -1044,7 +219,7 @@ export default function App() {
       else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
       else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
       else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
-      else if (view === "bridgeSettings") { setView("bridge"); }
+      else if (view === "bridgeSettings") { if (bridgePersonId) { setView("bridge"); } else { setView("medicalTab"); setActiveTab("medical"); } }
       else if (view === "memo") { setView("records"); setActiveTab("records"); }
       else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
       else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
@@ -1672,7 +847,7 @@ export default function App() {
               else if (view === "medicalLogEdit") { setView("medicalLog"); }
               else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
-              else if (view === "bridgeSettings") { setView("bridge"); }
+              else if (view === "bridgeSettings") { if (bridgePersonId) { setView("bridge"); } else { setView("medicalTab"); setActiveTab("medical"); } }
               else if (view === "memo") {
                 if (memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 setView("records"); setActiveTab("records");
@@ -1817,7 +992,7 @@ export default function App() {
             <div style={{ background: COLORS.surface, borderRadius: 16, padding: "16px 18px", marginBottom: 16, border: `1px solid ${COLORS.accent}30` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>Today's Check-in</div>
-                <button onClick={() => { const ns = todayCheckin.sleep === "4〜6時間" ? "4〜6時間未満" : todayCheckin.sleep === "6〜8時間" ? "6〜8時間未満" : todayCheckin.sleep; setCheckinDraft({ mood: todayCheckin.mood, condition: todayCheckin.condition, sleep: ns, memo: todayCheckin.memo || "" }); setView("checkin"); }}
+                <button onClick={() => { setCheckinDraft({ mood: todayCheckin.mood, condition: todayCheckin.condition, sleep: todayCheckin.sleep, memo: todayCheckin.memo || "" }); setView("checkin"); }}
                   style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer", padding: 0 }}>編集</button>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -2007,12 +1182,10 @@ export default function App() {
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => {
-              if (tellPeople.length === 1) {
-                const p = tellPeople[0];
-                setBridgePersonId(p.id);
-                setBridgeMemoInput("");
-                setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(p.id) && !m.completed).map(m => m.id)));
-                setView("bridge");
+              if (tellPeople.length === 0) {
+                setView("bridgePerson");
+              } else if (tellPeople.length === 1) {
+                initBridgeSession(tellPeople[0].id);
               } else {
                 setView("bridgePerson");
               }
@@ -2070,7 +1243,7 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {tellPeople.map(p => (
-                <button key={p.id} onClick={() => { setBridgePersonId(p.id); setBridgeMemoInput(""); setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(p.id) && !m.completed).map(m => m.id))); setView("bridge"); }}
+                <button key={p.id} onClick={() => initBridgeSession(p.id)}
                   style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px 18px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${COLORS.accent}20`, border: `1.5px solid ${COLORS.accent}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{p.name[0]}</span>
@@ -2107,7 +1280,7 @@ export default function App() {
         const handleSave = () => {
           if (!bridgeMemoInput.trim()) return;
           if (personPendingMemos.length === 0) {
-            setBridgeMemos(prev => [{ id: Date.now(), date: todayDs, content: bridgeMemoInput.trim() }, ...prev]);
+            setBridgeMemos(prev => [{ id: Date.now(), date: todayDs, content: bridgeMemoInput.trim(), personId: bridgePersonId }, ...prev]);
             setBridgeMemoInput("");
           } else {
             setBridgeMemoSelectDialog({ content: bridgeMemoInput.trim(), memos: personPendingMemos });
@@ -2186,7 +1359,7 @@ export default function App() {
                   ) : (
                     <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
                       {last14.map((d, i) => {
-                        const lv = d.sleep === "4時間未満" ? 1 : (d.sleep === "4〜6時間" || d.sleep === "4〜6時間未満") ? 2 : (d.sleep === "6〜8時間" || d.sleep === "6〜8時間未満") ? 3 : d.sleep === "8時間以上" ? 4 : null;
+                        const lv = d.sleep === "4時間未満" ? 1 : d.sleep === "4〜6時間未満" ? 2 : d.sleep === "6〜8時間未満" ? 3 : d.sleep === "8時間以上" ? 4 : null;
                         const barH = lv !== null ? Math.max(4, (lv / 4) * 44) : 4;
                         const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
                         return (
@@ -2238,10 +1411,10 @@ export default function App() {
             )}
 
             {/* 過去のメモ */}
-            {bridgeMemos.length > 0 && (
+            {bridgeMemos.filter(m => m.personId === bridgePersonId).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>過去のメモ</div>
-                {bridgeMemos.map(m => (
+                {bridgeMemos.filter(m => m.personId === bridgePersonId).map(m => (
                   <div key={m.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
                     <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
                     <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
@@ -2293,7 +1466,7 @@ export default function App() {
                       キャンセル
                     </button>
                     <button onClick={() => {
-                      setBridgeMemos(prev => [{ id: Date.now(), date: todayDs, content: bridgeMemoSelectDialog.content }, ...prev]);
+                      setBridgeMemos(prev => [{ id: Date.now(), date: todayDs, content: bridgeMemoSelectDialog.content, personId: bridgePersonId }, ...prev]);
                       setBridgeMemoInput("");
                       setBridgeMemoSelectDialog(null);
                     }}
@@ -4139,7 +3312,7 @@ export default function App() {
         const CHART_W = W - CHART_L - CHART_R;
 
         const conditionScore = (c) => c === "とても良い" ? 5 : c === "良い" ? 4 : c === "普通" ? 3 : c === "悪い" ? 2 : c === "とても悪い" ? 1 : null;
-        const sleepScore = (s) => s === "4時間未満" ? 1 : (s === "4〜6時間" || s === "4〜6時間未満") ? 2 : (s === "6〜8時間" || s === "6〜8時間未満") ? 3 : s === "8時間以上" ? 4 : null;
+        const sleepScore = (s) => s === "4時間未満" ? 1 : s === "4〜6時間未満" ? 2 : s === "6〜8時間未満" ? 3 : s === "8時間以上" ? 4 : null;
         const metricColor = (v, m) => {
           if (m === "mood") return moodColor(v);
           if (m === "condition") return v >= 4 ? COLORS.accent : v >= 3 ? "#e0a855" : COLORS.danger;
@@ -4413,8 +3586,7 @@ export default function App() {
                           </div>
                           <button onClick={() => {
                             setCheckinEditDate(data.date);
-                            const normSleep = data.sleep === "4〜6時間" ? "4〜6時間未満" : data.sleep === "6〜8時間" ? "6〜8時間未満" : data.sleep;
-                            setCheckinEditDraft({ mood: data.mood, condition: data.condition, sleep: normSleep, memo: data.memo || "" });
+                            setCheckinEditDraft({ mood: data.mood, condition: data.condition, sleep: data.sleep, memo: data.memo || "" });
                             setView("checkinEdit");
                           }}
                             style={{ flexShrink: 0, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 11, padding: "5px 10px" }}>
