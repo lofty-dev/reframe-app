@@ -2707,8 +2707,8 @@ export default function App() {
           )}
           {(() => {
             const sortedRecords = [...records].sort((a, b) => {
-              if (recordSort === "newest") return b.date.localeCompare(a.date);
-              if (recordSort === "oldest") return a.date.localeCompare(b.date);
+              if (recordSort === "newest") return (b.date || "").localeCompare(a.date || "");
+              if (recordSort === "oldest") return (a.date || "").localeCompare(b.date || "");
               if (recordSort === "incomplete") return (a.completed ? 1 : 0) - (b.completed ? 1 : 0);
               if (recordSort === "complete") return (b.completed ? 1 : 0) - (a.completed ? 1 : 0);
               return 0;
@@ -3296,7 +3296,8 @@ export default function App() {
           return toDateStr(String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
         });
         const weekCheckins = checkins.filter(c => weekDates.includes(c.date));
-        const avgMood = weekCheckins.length > 0 ? (weekCheckins.reduce((s, c) => s + c.mood, 0) / weekCheckins.length).toFixed(1) : null;
+        const moodCheckins = weekCheckins.filter(c => typeof c.mood === "number");
+        const avgMood = moodCheckins.length > 0 ? (moodCheckins.reduce((s, c) => s + c.mood, 0) / moodCheckins.length).toFixed(1) : null;
         const weekRecords = records.filter(r => {
           const rd = new Date(r.date);
           return rd >= monday && rd <= now;

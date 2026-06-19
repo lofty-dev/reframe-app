@@ -28,6 +28,7 @@ export const todayStr = () => {
 
 export const toDateStr = (y, m, d) => `${y}-${m}-${d}`;
 export const formatDate = (dateStr) => {
+  if (!dateStr) return "";
   const [, m, d] = dateStr.split("-");
   return `${parseInt(m)}月${parseInt(d)}日`;
 };
