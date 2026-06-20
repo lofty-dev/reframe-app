@@ -710,7 +710,7 @@ export default function App() {
     );
   }
 
-  if (agreed && !pwaPrompted && !isPwa) {
+  if (agreed && !pwaPrompted && !isPwa && !showPwaGuide) {
     return (
       <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px", boxSizing: "border-box" }}>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
