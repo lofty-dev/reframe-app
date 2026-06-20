@@ -185,6 +185,7 @@ export default function App() {
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
 
   const [pwaPrompted, setPwaPromptedState] = useState(hasPwaPrompted);
+  const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [showFeedbackBanner, setShowFeedbackBanner] = useState(() => !hasFeedbackBannerDismissed());
   const [importResult, setImportResult] = useState(null);
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -777,7 +778,7 @@ export default function App() {
         </div>
 
         <button
-          onClick={() => { setPwaPrompted(); setPwaPromptedState(true); }}
+          onClick={() => setShowPwaGuide(true)}
           style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 16, cursor: "pointer", marginBottom: 12 }}>
           ホーム画面に追加した！→
         </button>
@@ -785,6 +786,35 @@ export default function App() {
           onClick={() => { setPwaPrompted(); setPwaPromptedState(true); }}
           style={{ width: "100%", background: "none", border: "none", color: COLORS.textMuted, fontSize: 13, padding: "10px", cursor: "pointer" }}>
           あとで追加する
+        </button>
+      </div>
+    );
+  }
+
+  if (agreed && showPwaGuide && !pwaPrompted && !isPwa) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px", boxSizing: "border-box", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 32 }}>Stride</div>
+        <div style={{ marginBottom: 20 }}><IconHome size={48} color={COLORS.accent} /></div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 16, textAlign: "center", lineHeight: 1.6 }}>
+          ホーム画面から<br />Strideを開いてください
+        </div>
+        <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.9, textAlign: "center", marginBottom: 40, maxWidth: 320 }}>
+          ホーム画面に追加された<br />
+          <span style={{ color: COLORS.accent, fontWeight: 700 }}>Strideのアイコン</span>をタップして<br />
+          アプリを開き直してください。
+        </div>
+        <div style={{ background: COLORS.surface, borderRadius: 16, padding: "20px 24px", border: `1px solid ${COLORS.border}`, marginBottom: 40, width: "100%", maxWidth: 340 }}>
+          <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>なぜ開き直すの？</div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+            ブラウザ版とホーム画面版ではデータが別々に保存されます。最初からホーム画面版をお使いいただくことで、データの混乱を防げます。
+          </div>
+        </div>
+        <button
+          onClick={() => { setPwaPrompted(); setPwaPromptedState(true); }}
+          style={{ width: "100%", maxWidth: 340, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 13, padding: 14, cursor: "pointer" }}>
+          このままブラウザで続ける
         </button>
       </div>
     );
