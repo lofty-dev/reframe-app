@@ -1985,9 +1985,13 @@ export default function App() {
         const todayStr2 = toDateStr(t.year, t.month, t.day);
         const todayAchievements = achievements.filter(a => a.date === todayStr2);
 
-        // 連続記録日数を計算
+        // 連続記録日数を計算（今日未記録でも昨日から遡って数える）
         let streak = 0;
         const d = new Date();
+        const todayHasRecord = achievements.some(a => a.date === todayStr2);
+        if (!todayHasRecord) {
+          d.setDate(d.getDate() - 1);
+        }
         while (true) {
           const y = String(d.getFullYear());
           const m = String(d.getMonth() + 1).padStart(2, "0");
