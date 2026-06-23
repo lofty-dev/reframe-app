@@ -221,3 +221,11 @@ export const hasOnboarded = () => {
 export const setOnboarded = () => {
   try { localStorage.setItem(ONBOARDED_KEY, "true"); } catch (e) {}
 };
+
+export const THEME_SELECTED_KEY = "stride_theme_selected";
+export const hasThemeSelected = () => {
+  try { return localStorage.getItem(THEME_SELECTED_KEY) === "true"; } catch (e) { return false; }
+};
+export const setThemeSelected = () => {
+  try { localStorage.setItem(THEME_SELECTED_KEY, "true"); } catch (e) {}
+};

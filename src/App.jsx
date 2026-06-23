@@ -3,7 +3,7 @@ import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel } from "./constants";
-import { todayStr, toDateStr, formatDate, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed } from "./storage";
+import { todayStr, toDateStr, formatDate, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { DateSelector } from "./components/DateSelector";
@@ -38,6 +38,7 @@ export default function App() {
   const [onboarded, setOnboardedState] = useState(hasOnboarded);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [onboardSlide, setOnboardSlide] = useState(0);
+  const [themeSelected, setThemeSelectedState] = useState(hasThemeSelected);
   const [cookieNoticed, setCookieNoticed] = useState(() => { try { return localStorage.getItem("stride_cookie_noticed") === "true"; } catch { return false; } });
 
   const [newSituation, setNewSituation] = useState("");
@@ -342,6 +343,81 @@ export default function App() {
       + '<h2 class="crisis">Crisis — 危機のサイン</h2><ul>' + li(crisisPlan.crisis_signs) + '</ul>'
       + '<h2 class="crisis">Crisis — 対処法・連絡先</h2><ul>' + li(crisisPlan.crisis_contacts) + '</ul>'
       + '</body></html>';
+    printHtml(html);
+  };
+
+  const handleCopingPrint = () => {
+    const today = `${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`;
+    const rows = sortedCopings.map(c =>
+      '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;line-height:1.7;">' + c.text + '</td>'
+      + '<td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:center;">' + c.difficulty + ' / 5</td>'
+      + '<td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:center;">' + c.effect + ' / 5</td></tr>'
+    ).join('');
+    const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>コーピングリスト</title><style>'
+      + 'body{font-family:\'Hiragino Kaku Gothic ProN\',\'Noto Sans JP\',sans-serif;background:#fff;color:#111;padding:32px;max-width:600px;margin:0 auto;}'
+      + 'h1{font-size:22px;font-weight:700;margin:0 0 4px;}'
+      + '.meta{font-size:12px;color:#888;margin-bottom:28px;}'
+      + 'table{width:100%;border-collapse:collapse;}'
+      + 'th{font-size:12px;font-weight:700;color:#555;padding:8px 12px;border-bottom:2px solid #ddd;text-align:left;}'
+      + 'th.center{text-align:center;}'
+      + '</style></head><body>'
+      + '<h1>コーピングリスト</h1>'
+      + '<div class="meta">出力日：' + today + '　登録数：' + copings.length + '件</div>'
+      + (copings.length > 0
+        ? '<table><thead><tr><th>コーピング</th><th class="center">難易度</th><th class="center">効果</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<p style="color:#999;font-size:13px;">コーピングが登録されていません</p>')
+      + '</body></html>';
+    printHtml(html);
+  };
+
+  const handleDetailPrint = (record) => {
+    const today = `${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`;
+    let body = '<h1>ストレス記録</h1>'
+      + '<div class="meta">出力日：' + today + '</div>'
+      + '<div class="date">' + formatDate(record.date) + '</div>'
+      + '<div class="situation">' + record.situation + '</div>';
+    const tags = [];
+    if (record.category) tags.push(record.category);
+    if (record.intensity) tags.push(record.intensity);
+    if (tags.length > 0) body += '<div class="tags">' + tags.join('　') + '</div>';
+    if (record.firstThought) body += '<div class="thought">「' + record.firstThought + '」</div>';
+    if (record.coping) {
+      body += '<h2 style="color:#b8860b;">コーピングの記録</h2><div class="box">' + record.coping + '</div>';
+      if (record.copingReview) body += '<div class="sub">効果：' + record.copingReview + '</div>';
+    }
+    if (record.cbt && Object.keys(record.cbt).length > 0) {
+      body += '<h2 style="color:#0ea5e9;">認知再構成の記録</h2>';
+      [...CBT3_STEPS, ...CBT_STEPS].forEach(step => {
+        if (record.cbt[step.id]) {
+          body += '<div class="label">' + step.label + '</div><div class="box">' + record.cbt[step.id].replace(/\n/g, '<br>') + '</div>';
+        }
+      });
+    }
+    if (record.ps && Object.keys(record.ps).length > 0) {
+      body += '<h2 style="color:#818cf8;">問題解決技法の記録</h2>';
+      PS_STEPS.forEach(step => {
+        if (record.ps[step.id]) {
+          body += '<div class="label">' + step.label + '</div><div class="box">' + record.ps[step.id].replace(/\n/g, '<br>') + '</div>';
+        }
+      });
+      if (record.ps.review) {
+        if (record.ps.review.result) body += '<div class="label">試してみた結果</div><div class="box">' + record.ps.review.result + '</div>';
+        if (record.ps.review.insight) body += '<div class="label">気づいたこと</div><div class="box">' + record.ps.review.insight + '</div>';
+      }
+    }
+    const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>ストレス記録</title><style>'
+      + 'body{font-family:\'Hiragino Kaku Gothic ProN\',\'Noto Sans JP\',sans-serif;background:#fff;color:#111;padding:32px;max-width:600px;margin:0 auto;}'
+      + 'h1{font-size:22px;font-weight:700;margin:0 0 4px;}'
+      + '.meta{font-size:12px;color:#888;margin-bottom:28px;}'
+      + '.date{font-size:12px;color:#888;margin-bottom:6px;}'
+      + '.situation{font-size:16px;font-weight:600;line-height:1.6;margin-bottom:12px;}'
+      + '.tags{font-size:13px;color:#555;margin-bottom:8px;}'
+      + '.thought{font-size:13px;color:#888;font-style:italic;margin-bottom:20px;}'
+      + 'h2{font-size:14px;font-weight:700;margin:24px 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd;}'
+      + '.label{font-size:11px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin:12px 0 4px;}'
+      + '.box{font-size:13px;line-height:1.9;padding:10px 14px;background:#f9f9f9;border-radius:8px;margin-bottom:8px;}'
+      + '.sub{font-size:13px;color:#b8860b;margin-top:4px;}'
+      + '</style></head><body>' + body + '</body></html>';
     printHtml(html);
   };
 
@@ -855,6 +931,48 @@ export default function App() {
             else setOnboardSlide(onboardSlide + 1);
           }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
             {isLast ? "はじめる 🎉" : "次へ →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (agreed && onboarded && !themeSelected) {
+    return (
+      <div style={{ height: "100dvh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .theme-select { animation: fadeIn 0.3s ease-out; }`}</style>
+
+        <div className="theme-select" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+          <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 24 }}>Stride</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 8, textAlign: "center", lineHeight: 1.4 }}>テーマを選んでください</div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 36, textAlign: "center" }}>設定からいつでも変更できます</div>
+
+          <div style={{ display: "flex", gap: 16, width: "100%", maxWidth: 320 }}>
+            <button onClick={() => toggleTheme(false)}
+              style={{ flex: 1, background: "#f5f7fa", border: `3px solid ${!isDark ? COLORS.accent : "#d1d5db"}`, borderRadius: 16, padding: "20px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, transition: "border-color 0.25s" }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: "#ffffff", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #fbbf24, #f59e0b)" }} />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1d27" }}>ライト</div>
+              {!isDark && <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700 }}>選択中</div>}
+            </button>
+
+            <button onClick={() => toggleTheme(true)}
+              style={{ flex: 1, background: "#0f1117", border: `3px solid ${isDark ? COLORS.accent : "#4b5563"}`, borderRadius: 16, padding: "20px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, transition: "border-color 0.25s" }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: "#1a1d27", border: "1px solid #2a2d37", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #818cf8, #6366f1)" }} />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#e5e7eb" }}>ダーク</div>
+              {isDark && <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700 }}>選択中</div>}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: "16px 24px 40px", flexShrink: 0 }}>
+          <button onClick={() => { setThemeSelected(); setThemeSelectedState(true); }}
+            style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+            このテーマではじめる →
           </button>
         </div>
       </div>
@@ -2958,6 +3076,12 @@ export default function App() {
               </div>
             </div>
           )}
+          {copings.length > 0 && (
+            <button className="no-print" onClick={handleCopingPrint}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <IconDownload size={16} />PDFとして保存する
+            </button>
+          )}
           <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
@@ -3944,6 +4068,10 @@ export default function App() {
 
           <button onClick={() => startApproach(selectedDetail.id)} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8 }}>
             アプローチを選ぶ →
+          </button>
+          <button className="no-print" onClick={() => handleDetailPrint(selectedDetail)}
+            style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <IconDownload size={16} />PDFとして保存する
           </button>
           <BottomNav onBack={() => { setView("list"); setEditing(false); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
