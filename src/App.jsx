@@ -189,6 +189,7 @@ export default function App() {
   const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [tawkLoading, setTawkLoading] = useState(false);
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isAndroid = /android/i.test(navigator.userAgent);
@@ -1234,11 +1235,22 @@ export default function App() {
               </div>
             </button>
           </div>
-          <button onClick={() => { if (window.Tawk_API && window.Tawk_API.toggle) window.Tawk_API.toggle(); }}
-            style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8 }}>
+          <button disabled={tawkLoading} onClick={() => {
+            if (window.Tawk_API && window.Tawk_API.maximize) { window.Tawk_API.maximize(); return; }
+            setTawkLoading(true);
+            window.Tawk_API = window.Tawk_API || {};
+            window.Tawk_API.customStyle = { visibility: { bubble: { show: false } } };
+            window.Tawk_API.onLoad = function() { setTawkLoading(false); Tawk_API.hideWidget(); Tawk_API.maximize(); };
+            window.Tawk_LoadStart = new Date();
+            var s1 = document.createElement("script"); s1.async = true;
+            s1.src = "https://embed.tawk.to/6a3b1d657cb51a1d46e0cb47/1jrrellv6";
+            s1.charset = "UTF-8"; s1.setAttribute("crossorigin", "*");
+            document.head.appendChild(s1);
+          }}
+            style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8, opacity: tawkLoading ? 0.6 : 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <IconMessageChatbot size={18} color={COLORS.accent} />
-              <span>製作者に話しかける</span>
+              <span>{tawkLoading ? "接続中..." : "製作者に話しかける"}</span>
             </div>
           </button>
           <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6, marginTop: 6, paddingLeft: 2 }}>
