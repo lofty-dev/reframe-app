@@ -1234,7 +1234,7 @@ export default function App() {
               </div>
             </button>
           </div>
-          <button onClick={() => { if (typeof window.Tawk_API?.maximize === "function" && typeof window.Tawk_API?.isChatHidden === "function") { window.Tawk_API.maximize(); } else { window.open("https://tawk.to/chat/6a3b1d657cb51a1d46e0cb47/1jrrellv6", "_blank"); } }}
+          <button onClick={() => { window.open("https://tawk.to/chat/6a3b1d657cb51a1d46e0cb47/1jrrellv6", "_blank"); }}
             style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <IconMessageChatbot size={18} color={COLORS.accent} />
@@ -1243,6 +1243,7 @@ export default function App() {
           </button>
           <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6, marginTop: 6, paddingLeft: 2 }}>
             ユーザーが少ない今だけ、製作者に直接話しかけられます。疑問点などあればお気軽にどうぞ。
+            <br />※別の画面が開いたら「New Conversation」をタップしてください。
           </div>
 
           {/* お知らせ */}
