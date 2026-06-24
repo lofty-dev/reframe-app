@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconMessageChatbot, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel } from "./constants";
@@ -1233,17 +1233,6 @@ export default function App() {
                 <span>フィードバック</span>
               </div>
             </button>
-          </div>
-          <button onClick={() => { window.open("https://tawk.to/chat/6a3b1d657cb51a1d46e0cb47/1jrrellv6", "_blank"); }}
-            style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <IconMessageChatbot size={18} color={COLORS.accent} />
-              <span>製作者に話しかける</span>
-            </div>
-          </button>
-          <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6, marginTop: 6, paddingLeft: 2 }}>
-            ユーザーが少ない今だけ、製作者に直接話しかけられます。疑問点などあればお気軽にどうぞ。
-            <br />※別の画面が開いたら「New Conversation」をタップしてください。
           </div>
 
           {/* お知らせ */}
