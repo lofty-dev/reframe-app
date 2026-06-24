@@ -1245,6 +1245,8 @@ export default function App() {
             var s1 = document.createElement("script"); s1.async = true;
             s1.src = "https://embed.tawk.to/6a3b1d657cb51a1d46e0cb47/1jrrellv6";
             s1.charset = "UTF-8"; s1.setAttribute("crossorigin", "*");
+            s1.onerror = function() { setTawkLoading(false); alert("チャットの読み込みに失敗しました。通信環境を確認して再度お試しください。"); };
+            setTimeout(function() { if (!window.Tawk_API || !window.Tawk_API.maximize) { setTawkLoading(false); } }, 15000);
             document.head.appendChild(s1);
           }}
             style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8, opacity: tawkLoading ? 0.6 : 1 }}>
