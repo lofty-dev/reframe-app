@@ -1234,7 +1234,7 @@ export default function App() {
               </div>
             </button>
           </div>
-          <button onClick={() => { if (window.Tawk_API && window.Tawk_API.maximize) { window.Tawk_API.maximize(); } else { window.open("https://tawk.to/chat/6a3b1d657cb51a1d46e0cb47/1jrrellv6", "_blank"); } }}
+          <button onClick={() => { if (typeof window.Tawk_API?.maximize === "function" && typeof window.Tawk_API?.isChatHidden === "function") { window.Tawk_API.maximize(); } else { window.open("https://tawk.to/chat/6a3b1d657cb51a1d46e0cb47/1jrrellv6", "_blank"); } }}
             style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <IconMessageChatbot size={18} color={COLORS.accent} />
