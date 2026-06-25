@@ -196,9 +196,12 @@ export default function App() {
 
   const initialMount = useRef(true);
   useEffect(() => {
-    const splash = document.getElementById("splash-screen");
-    if (splash) splash.remove();
-    initialMount.current = false;
+    const removeSplash = () => {
+      const splash = document.getElementById("splash-screen");
+      if (splash) splash.remove();
+      initialMount.current = false;
+    };
+    document.fonts.ready.then(removeSplash);
   }, []);
 
   useEffect(() => {
