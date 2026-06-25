@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
@@ -194,9 +194,11 @@ export default function App() {
   const isAndroid = /android/i.test(navigator.userAgent);
   const isIosChrome = isIos && /CriOS/i.test(navigator.userAgent);
 
+  const initialMount = useRef(true);
   useEffect(() => {
     const splash = document.getElementById("splash-screen");
     if (splash) splash.remove();
+    initialMount.current = false;
   }, []);
 
   useEffect(() => {
@@ -1090,7 +1092,7 @@ export default function App() {
 
       {/* HOME */}
       {view === "home" && (
-        <div className="page" style={{ padding: "24px 16px 20px" }}>
+        <div className={initialMount.current ? undefined : "page"} style={{ padding: "24px 16px 20px" }}>
           {/* PWAバナー */}
           {!isPwa && isIosChrome && (
             <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 10 }}>
