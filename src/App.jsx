@@ -979,7 +979,7 @@ export default function App() {
           from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .page { animation: fadeIn 0.18s ease-out; }
+        .page { animation: ${dataReady ? 'fadeIn 0.18s ease-out' : 'none'}; }
         body { padding-bottom: env(safe-area-inset-bottom); }
         @keyframes skeletonPulse {
           0%, 100% { opacity: 0.5; }
