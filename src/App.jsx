@@ -197,10 +197,7 @@ export default function App() {
 
   useEffect(() => {
     const splash = document.getElementById("splash-screen");
-    if (splash) {
-      splash.classList.add("splash-hide");
-      setTimeout(() => splash.remove(), 200);
-    }
+    if (splash) splash.remove();
     requestAnimationFrame(() => setDataReady(true));
   }, []);
 
