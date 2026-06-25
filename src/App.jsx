@@ -189,6 +189,7 @@ export default function App() {
   const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [dataReady, setDataReady] = useState(false);
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isAndroid = /android/i.test(navigator.userAgent);
@@ -198,8 +199,9 @@ export default function App() {
     const splash = document.getElementById("splash-screen");
     if (splash) {
       splash.classList.add("splash-hide");
-      setTimeout(() => splash.remove(), 400);
+      setTimeout(() => splash.remove(), 200);
     }
+    requestAnimationFrame(() => setDataReady(true));
   }, []);
 
   useEffect(() => {
@@ -937,7 +939,7 @@ export default function App() {
       <div style={{ height: "100dvh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .theme-select { animation: fadeIn 0.3s ease-out; }`}</style>
 
-        <div className="theme-select" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+        <div className="theme-select" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", paddingBottom: 80 }}>
           <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 24 }}>Stride</div>
           <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 8, textAlign: "center", lineHeight: 1.4 }}>テーマを選んでください</div>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 36, textAlign: "center" }}>設定からいつでも変更できます</div>
@@ -963,9 +965,9 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ padding: "16px 24px 40px", flexShrink: 0 }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px", paddingBottom: "max(24px, env(safe-area-inset-bottom))", background: COLORS.bg, zIndex: 10 }}>
           <button onClick={() => { setThemeSelected(); setThemeSelectedState(true); }}
-            style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+            style={{ width: "100%", maxWidth: 432, margin: "0 auto", display: "block", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
             このテーマではじめる →
           </button>
         </div>
@@ -982,7 +984,11 @@ export default function App() {
         }
         .page { animation: fadeIn 0.18s ease-out; }
         body { padding-bottom: env(safe-area-inset-bottom); }
-
+        @keyframes skeletonPulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        .skeleton { animation: skeletonPulse 1.2s ease-in-out infinite; }
       `}</style>
 
       {/* Header */}
@@ -1093,7 +1099,56 @@ export default function App() {
       </div>
 
       {/* HOME */}
-      {view === "home" && (
+      {view === "home" && !dataReady && (
+        <div className="page" style={{ padding: "24px 16px 20px" }}>
+          {/* スケルトン: ヒーローテキスト */}
+          <div style={{ marginBottom: 20 }}>
+            <div className="skeleton" style={{ width: 180, height: 28, background: COLORS.surface, borderRadius: 6, marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: 220, height: 14, background: COLORS.surface, borderRadius: 4 }} />
+          </div>
+          {/* スケルトン: チェックインカード */}
+          <div className="skeleton" style={{ background: COLORS.surface, borderRadius: 16, padding: "16px 18px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+            <div style={{ width: 120, height: 12, background: COLORS.border, borderRadius: 4, marginBottom: 12 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 48, height: 48, background: COLORS.border, borderRadius: 8 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 6, background: COLORS.border, borderRadius: 3, marginBottom: 10 }} />
+                <div style={{ width: 140, height: 12, background: COLORS.border, borderRadius: 4 }} />
+              </div>
+            </div>
+          </div>
+          {/* スケルトン: 7日間グラフ */}
+          <div className="skeleton" style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+            <div style={{ width: 130, height: 12, background: COLORS.border, borderRadius: 4, marginBottom: 20 }} />
+            <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 60 }}>
+              {Array.from({ length: 7 }, (_, i) => (
+                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  <div style={{ width: "100%", height: 12 + (i % 3) * 10, borderRadius: 3, background: COLORS.border }} />
+                  <div style={{ width: 20, height: 8, background: COLORS.border, borderRadius: 2 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* スケルトン: ガイド・サポートボタン */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <div className="skeleton" style={{ flex: 1, background: COLORS.surface, borderRadius: 14, height: 48, border: `1px solid ${COLORS.border}` }} />
+            <div className="skeleton" style={{ flex: 1, background: COLORS.surface, borderRadius: 14, height: 48, border: `1px solid ${COLORS.border}` }} />
+          </div>
+          {/* スケルトン: お知らせ */}
+          <div style={{ marginTop: 20 }}>
+            <div className="skeleton" style={{ width: 80, height: 14, background: COLORS.surface, borderRadius: 4, marginBottom: 12 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[1, 2].map(i => (
+                <div key={i} className="skeleton" style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ width: 70, height: 10, background: COLORS.border, borderRadius: 3, marginBottom: 6 }} />
+                  <div style={{ width: "90%", height: 13, background: COLORS.border, borderRadius: 4 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {view === "home" && dataReady && (
         <div className="page" style={{ padding: "24px 16px 20px" }}>
           {/* PWAバナー */}
           {!isPwa && isIosChrome && (
