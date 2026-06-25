@@ -196,7 +196,6 @@ export default function App() {
   const isIosChrome = isIos && /CriOS/i.test(navigator.userAgent);
 
   useEffect(() => {
-    if (window.__splashTimer) clearTimeout(window.__splashTimer);
     const splash = document.getElementById("splash-screen");
     if (splash) {
       splash.classList.add("splash-hide");

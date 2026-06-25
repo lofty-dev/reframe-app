@@ -68,31 +68,6 @@
         letter-spacing: 0.02em;
         color: #38bdf8;
       }
-      #splash-loading {
-        margin-top: 14px;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
-        font-size: 13px;
-        color: #6b7280;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      #splash-loading.show {
-        opacity: 1;
-      }
-      #splash-spinner {
-        width: 13px;
-        height: 13px;
-        border: 2px solid #2a2d3e;
-        border-top-color: #38bdf8;
-        border-radius: 50%;
-        animation: splash-spin 0.8s linear infinite;
-      }
-      @keyframes splash-spin {
-        to { transform: rotate(360deg); }
-      }
     </style>
     <script>
       (function () {
@@ -152,17 +127,7 @@
   <body>
     <div id="splash-screen">
       <div id="splash-title">Stride</div>
-      <div id="splash-loading">
-        <span id="splash-spinner"></span>
-        <span>読み込み中...</span>
-      </div>
     </div>
-    <script>
-      window.__splashTimer = setTimeout(function() {
-        var el = document.getElementById('splash-loading');
-        if (el) el.classList.add('show');
-      }, 1000);
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
