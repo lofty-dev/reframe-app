@@ -195,14 +195,7 @@ export default function App() {
   const isIosChrome = isIos && /CriOS/i.test(navigator.userAgent);
 
   const initialMount = useRef(true);
-  useEffect(() => {
-    const removeSplash = () => {
-      const splash = document.getElementById("splash-screen");
-      if (splash) splash.remove();
-      initialMount.current = false;
-    };
-    document.fonts.ready.then(removeSplash);
-  }, []);
+  useEffect(() => { initialMount.current = false; }, []);
 
   useEffect(() => {
     if (view !== "home") {
