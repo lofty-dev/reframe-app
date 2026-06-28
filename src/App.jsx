@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell, IconBrandLine } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel } from "./constants";
@@ -689,7 +689,7 @@ export default function App() {
               { title: "1. はじめに", body: "Stride（以下「本アプリ」）は、ユーザーのプライバシーを尊重し、個人情報の適切な取り扱いに努めます。" },
               { title: "2. 収集する情報", body: "■ユーザーが入力する情報\n・気分・体調・睡眠に関する記録\n・ストレスや出来事に関するメモ\n・認知再構成・問題解決技法・コーピングに関する記録\n・クライシスプランの内容\n・その他、アプリ内で入力したすべての情報\n\n■自動的に収集される情報\n本アプリはGoogle Analyticsを使用しています。アクセス状況（ページビュー数・滞在時間など）を収集・分析しています。Googleのプライバシーポリシーが適用されます。" },
               { title: "3. 情報の保存場所", body: "ユーザーが入力した情報は、ご利用のデバイスのブラウザ内（localStorage等）にのみ保存され、ユーザーの同意なく外部のサーバーに送信されることはありません。開発者を含む第三者が、ユーザーの記録内容を閲覧することはできません。\n\n※将来的に、AIによる分析機能（任意・有料）を追加する場合があります。この機能を利用する際は、分析のために入力データの一部が外部サーバーに送信されますが、これはご本人がこの機能を有効にし、明示的に同意した場合に限ります。同意しない限り、データが外部に送信されることはありません。\n\n※ブラウザのデータを削除した場合、記録は復元できません。エクスポート機能でのバックアップを推奨します。" },
-              { title: "4. 情報の第三者提供", body: "本アプリは、ユーザーの情報を第三者に販売・提供・開示しません。ただし、以下の外部サービスを利用しています：\n\n・Googleフォーム（フィードバック収集）：入力情報はGoogleのサービスを通じて処理されます\n\n・Google Analytics（アクセス解析）：Googleのプライバシーポリシーが適用されます\n\n・Google Search Console（検索流入の分析）：検索エンジン経由のアクセス状況を把握するために使用します。Googleのプライバシーポリシーが適用されます\n\n・（将来）AI分析機能：本機能を有効にした場合に限り、分析処理のために外部のAIサービスへ入力データの一部が送信されます。本機能はオプトイン（任意）であり、有効にしない限りデータが送信されることはありません" },
+              { title: "4. 情報の第三者提供", body: "本アプリは、ユーザーの情報を第三者に販売・提供・開示しません。ただし、以下の外部サービスを利用しています：\n\n・Googleフォーム（フィードバック収集）：入力情報はGoogleのサービスを通じて処理されます\n\n・Google Analytics（アクセス解析）：Googleのプライバシーポリシーが適用されます\n\n・Google Search Console（検索流入の分析）：検索エンジン経由のアクセス状況を把握するために使用します。Googleのプライバシーポリシーが適用されます\n\n・LINE公式アカウント（LINEで話しかける機能）：LINEで話しかける機能を使用した場合、LINEのサービスを通じて処理されます。LINEのプライバシーポリシーが適用されます\n\n・（将来）AI分析機能：本機能を有効にした場合に限り、分析処理のために外部のAIサービスへ入力データの一部が送信されます。本機能はオプトイン（任意）であり、有効にしない限りデータが送信されることはありません" },
               { title: "5. Cookie・ローカルストレージについて", body: "アプリの機能提供のためにlocalStorageを使用します。広告目的では使用しません。\n\n端末を他の方と共有している場合、ブラウザの開発者ツールから記録データが閲覧される可能性があります。共有端末でのご利用はご注意ください。" },
               { title: "6. プライバシーポリシーの変更", body: "本ポリシーは必要に応じて更新されます。重要な変更はアプリ内でお知らせします。" },
               { title: "7. お問い合わせ", body: "アプリ内のフィードバックフォームよりご連絡ください。" },
@@ -1221,6 +1221,13 @@ export default function App() {
               </div>
             </button>
           </div>
+          <button onClick={() => window.open("https://lin.ee/7NTBahB", "_blank")}
+            style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 13, fontWeight: 700, padding: "14px 12px", cursor: "pointer", textAlign: "left", marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <IconBrandLine size={18} color={COLORS.accent} />
+              <span>制作者にLINEする</span>
+            </div>
+          </button>
 
           {/* お知らせ */}
           <div style={{ marginTop: 20 }}>
