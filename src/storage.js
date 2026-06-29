@@ -41,19 +41,19 @@ export const loadBridgeSettings = () => {
 export const saveBridgeSettings = (d) => { try { localStorage.setItem(BRIDGE_SETTINGS_KEY, JSON.stringify(d)); } catch (e) {} };
 
 export const loadBridgeMemos = () => {
-  try { const s = localStorage.getItem(BRIDGE_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  try { const s = localStorage.getItem(BRIDGE_MEMOS_KEY); if (s) { const p = JSON.parse(s); if (Array.isArray(p)) return p; } } catch (e) {}
   return [];
 };
 export const saveBridgeMemos = (d) => { try { localStorage.setItem(BRIDGE_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
 
 export const loadTellPeople = () => {
-  try { const s = localStorage.getItem(TELL_PEOPLE_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  try { const s = localStorage.getItem(TELL_PEOPLE_KEY); if (s) { const p = JSON.parse(s); if (Array.isArray(p)) return p; } } catch (e) {}
   return [];
 };
 export const saveTellPeople = (d) => { try { localStorage.setItem(TELL_PEOPLE_KEY, JSON.stringify(d)); } catch (e) {} };
 
 export const loadTellMemos = () => {
-  try { const s = localStorage.getItem(TELL_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  try { const s = localStorage.getItem(TELL_MEMOS_KEY); if (s) { const p = JSON.parse(s); if (Array.isArray(p)) return p; } } catch (e) {}
   return [];
 };
 export const saveTellMemos = (d) => { try { localStorage.setItem(TELL_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
@@ -61,7 +61,7 @@ export const saveTellMemos = (d) => { try { localStorage.setItem(TELL_MEMOS_KEY,
 export const loadMemo = () => {
   try {
     const saved = localStorage.getItem(MEMO_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) { const p = JSON.parse(saved); if (Array.isArray(p)) return p; }
   } catch (e) {}
   return [];
 };
@@ -72,7 +72,7 @@ export const saveMemo = (data) => {
 export const loadAchievements = () => {
   try {
     const saved = localStorage.getItem(ACHIEVEMENTS_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) { const p = JSON.parse(saved); if (Array.isArray(p)) return p; }
   } catch (e) {}
   return [];
 };
@@ -104,7 +104,7 @@ export const saveCrisisPlan = (plan) => {
 export const loadRecords = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) { const p = JSON.parse(saved); if (Array.isArray(p)) return p; }
   } catch (e) {}
   return [];
 };
@@ -116,7 +116,7 @@ export const saveRecords = (records) => {
 export const loadCheckins = () => {
   try {
     const saved = localStorage.getItem(CHECKIN_KEY);
-    if (saved) return normalizeCheckins(JSON.parse(saved));
+    if (saved) { const p = JSON.parse(saved); if (Array.isArray(p)) return normalizeCheckins(p); }
   } catch (e) {}
   return [];
 };
@@ -128,7 +128,7 @@ export const saveCheckins = (checkins) => {
 export const loadCopings = () => {
   try {
     const saved = localStorage.getItem(COPING_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) { const p = JSON.parse(saved); if (Array.isArray(p)) return p; }
   } catch (e) {}
   return [];
 };

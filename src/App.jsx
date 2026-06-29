@@ -6,6 +6,7 @@ import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS
 import { todayStr, toDateStr, formatDate, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
+import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { DateSelector } from "./components/DateSelector";
 import { EmotionInput, AutoThoughtInput } from "./components/EmotionInput";
 import { SortablePersonItem } from "./components/SortablePersonItem";
@@ -169,7 +170,7 @@ export default function App() {
   const [mfMinutes, setMfMinutes] = useState(5);
   const [mfRunning, setMfRunning] = useState(false);
   const [mfRemaining, setMfRemaining] = useState(null);
-  const [mfTimerRef, setMfTimerRef] = useState(null);
+  const mfTimerRef = useRef(null);
   const [mfInfoOpen, setMfInfoOpen] = useState(false);
 
   const [guideOpenIndex, setGuideOpenIndex] = useState(null);
@@ -223,7 +224,7 @@ export default function App() {
       else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
       else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
       else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
-      else if (view === "mindfulness") { if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); } setView("tools"); setActiveTab("tools"); }
+      else if (view === "mindfulness") { if (mfTimerRef.current) { clearInterval(mfTimerRef.current); setMfRunning(false); setMfRemaining(null); } setView("tools"); setActiveTab("tools"); }
       else if (view === "new") { setView("list"); }
       else if (view === "detail") { setView("list"); setEditing(false); }
       else if (view === "copingSelect") { setView("approach"); }
@@ -255,7 +256,7 @@ export default function App() {
 
   useEffect(() => {
     if (view !== "mindfulness" && mfRunning) {
-      if (mfTimerRef) clearInterval(mfTimerRef);
+      if (mfTimerRef.current) clearInterval(mfTimerRef.current);
       try {
         if (window._mfGain) window._mfGain.gain.exponentialRampToValueAtTime(0.001, window._mfAudioCtx.currentTime + 0.5);
         setTimeout(() => { try { window._mfSource?.stop(); window._mfAudioCtx?.close(); } catch(e) {} }, 600);
@@ -263,7 +264,7 @@ export default function App() {
       setMfRunning(false);
       setMfRemaining(null);
     }
-  }, [view]);
+  }, [view, mfRunning]);
 
   const printHtml = (html) => {
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
@@ -1005,7 +1006,7 @@ export default function App() {
               else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
               else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
               else if (view === "mindfulness") {
-                if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
+                if (mfTimerRef.current) { clearInterval(mfTimerRef.current); setMfRunning(false); setMfRemaining(null); }
                 setView("tools"); setActiveTab("tools");
               }
               else if (view === "new") { setView("list"); }
@@ -2012,6 +2013,7 @@ export default function App() {
         };
 
         return (
+          <PageErrorBoundary>
           <div className="page" style={{ padding: "20px 16px" }}>
             {/* 連続記録 */}
             <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 16, border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 16 }}>
@@ -2150,11 +2152,13 @@ export default function App() {
               </div>
             )}
           </div>
+          </PageErrorBoundary>
         );
       })()}
 
       {/* MINDFULNESS */}
       {view === "mindfulness" && (
+        <PageErrorBoundary>
         <div className="page" style={{ padding: "32px 16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
 
           {!mfRunning && mfRemaining === null && (
@@ -2275,7 +2279,7 @@ export default function App() {
                     return prev - 1;
                   });
                 }, 1000);
-                setMfTimerRef(ref);
+                mfTimerRef.current = ref;
               }} style={{ width: 160, height: 160, borderRadius: "50%", border: `3px solid #818cf8`, background: "#818cf815", color: "#818cf8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
                 <span style={{ fontSize: 32 }}>▶</span>
                 スタート
@@ -2310,7 +2314,7 @@ export default function App() {
               </div>
 
               <button onClick={() => {
-                if (mfTimerRef) clearInterval(mfTimerRef);
+                if (mfTimerRef.current) clearInterval(mfTimerRef.current);
                 try {
                   if (window._mfGain) window._mfGain.gain.exponentialRampToValueAtTime(0.001, window._mfAudioCtx.currentTime + 0.5);
                   setTimeout(() => { try { window._mfSource?.stop(); window._mfAudioCtx?.close(); } catch(e) {} }, 600);
@@ -2351,6 +2355,7 @@ export default function App() {
             </div>
           )}
         </div>
+        </PageErrorBoundary>
       )}
 
       {/* MEDICAL LOG */}
@@ -2831,6 +2836,7 @@ export default function App() {
 
       {/* LIST */}
       {view === "list" && (
+        <PageErrorBoundary>
         <div className="page" style={{ padding: "20px 16px" }}>
           <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IconPlus size={18} />ストレスを記録する
@@ -2939,6 +2945,7 @@ export default function App() {
           )}
           <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
+        </PageErrorBoundary>
       )}
 
       {/* COPING LIST */}
@@ -3504,6 +3511,7 @@ export default function App() {
         });
 
         return (
+          <PageErrorBoundary>
           <div className="page" style={{ padding: "20px 16px" }}>
             {/* タブ */}
             <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -3777,6 +3785,7 @@ export default function App() {
 
             <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
+          </PageErrorBoundary>
         );
       })()}
       {view === "checkin" && (
