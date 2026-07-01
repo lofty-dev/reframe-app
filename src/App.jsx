@@ -970,7 +970,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 120 }}>
+    <div className="main-wrapper" style={{ position: "relative", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 120 }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(6px); }
@@ -978,6 +978,7 @@ export default function App() {
         }
         .page { animation: fadeIn 0.18s ease-out; }
         body { padding-bottom: env(safe-area-inset-bottom); }
+        .main-wrapper { min-height: 100vh; min-height: 100dvh; }
       `}</style>
 
       {/* Header */}
@@ -3789,7 +3790,7 @@ export default function App() {
         );
       })()}
       {view === "checkin" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           {/* 気分スコア */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
@@ -3855,7 +3856,7 @@ export default function App() {
       {view === "checkinEdit" && (() => {
         const editDateLabel = checkinEditDate ? (() => { const [, m, d] = checkinEditDate.split("-"); return `${parseInt(m)}月${parseInt(d)}日`; })() : "";
         return (
-          <div className="page" style={{ padding: "24px 16px" }}>
+          <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>{editDateLabel}のチェックインを編集</div>
             {/* 気分スコア */}
             <div style={{ marginBottom: 28 }}>
