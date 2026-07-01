@@ -1090,7 +1090,7 @@ export default function App() {
 
       {/* HOME */}
       {view === "home" && (
-        <div className={initialMount.current ? undefined : "page"} style={{ padding: "24px 16px 20px" }}>
+        <div className={initialMount.current ? undefined : "page"} style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           {/* PWAバナー */}
           {!isPwa && isIosChrome && (
             <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 10 }}>
@@ -1251,7 +1251,7 @@ export default function App() {
 
       {/* RECORDS TAB */}
       {view === "records" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20, lineHeight: 1.6 }}>記録と振り返りのツールが集まっています</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => setView("list")}
@@ -1293,7 +1293,7 @@ export default function App() {
 
       {/* TOOLS TAB */}
       {view === "tools" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20, lineHeight: 1.6 }}>気持ちの安定と再発防止を支えるツールです</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => setView("coping")}
@@ -1335,7 +1335,7 @@ export default function App() {
 
       {/* MEDICAL TAB */}
       {view === "medicalTab" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => {
@@ -3164,7 +3164,7 @@ export default function App() {
 
       {/* NEW COPING */}
       {view === "newCoping" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>どんな対処法？</div>
             <textarea rows={4} style={inpStyle()} placeholder="例）散歩に出かける、好きな音楽を聴く、深呼吸を10回する" value={newCoping.text} onChange={(e) => setNewCoping({ ...newCoping, text: e.target.value })} />
@@ -3925,7 +3925,7 @@ export default function App() {
 
       {/* NEW */}
       {view === "new" && (
-        <div className="page" style={{ padding: "24px 16px" }}>
+        <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
             <DateSelector year={newYear} month={newMonth} day={newDay} onYear={setNewYear} onMonth={setNewMonth} onDay={setNewDay} />
