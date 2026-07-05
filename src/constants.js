@@ -1,5 +1,17 @@
 import { IconLeaf, IconChartLine, IconBrain, IconStethoscope, IconNotes } from "@tabler/icons-react";
 
+export const MED_EVENT_TYPES = [
+  { value: "start", label: "開始" },
+  { value: "increase", label: "増量" },
+  { value: "decrease", label: "減量" },
+  { value: "change", label: "変更" },
+  { value: "stop", label: "中止" },
+  { value: "tonpuku", label: "頓服使用" },
+];
+export const medEventTypeLabel = (type) => MED_EVENT_TYPES.find(t => t.value === type)?.label || type;
+export const MED_LABEL_MAX = 30;
+export const MED_NOTE_MAX = 100;
+
 export const THEME_KEY = "stride_theme";
 
 export const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満": "6〜7時間" };
@@ -160,6 +172,9 @@ export const EMOTION_LIST = [
 export const INTENSITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 export const TELL_PERSON_TYPES = ["主治医", "精神保健福祉士", "カウンセラー", "その他"];
+
+export const THEME_TEXT_MAX = 100;
+export const THEME_PLACEHOLDER = "例：睡眠時間を見ていく／頓服を使ったタイミングをメモする";
 
 export const STRESS_CATEGORIES = ["人間関係", "仕事・作業", "健康・体調", "お金", "将来・不安", "家族", "その他"];
 export const STRESS_INTENSITIES = ["軽い", "中", "重い"];

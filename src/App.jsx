@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell, IconBrandLine } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell, IconBrandLine, IconX, IconPill } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel } from "./constants";
-import { todayStr, toDateStr, formatDate, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected } from "./storage";
+import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
+import { todayStr, toDateStr, formatDate, formatDateShort, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { DateSelector } from "./components/DateSelector";
 import { EmotionInput, AutoThoughtInput } from "./components/EmotionInput";
 import { SortablePersonItem } from "./components/SortablePersonItem";
+import { ThemePrompt } from "./components/ThemePrompt";
 
 export default function App() {
   const t = todayStr();
@@ -124,6 +125,11 @@ export default function App() {
   const [medicalLogDetailId, setMedicalLogDetailId] = useState(null);
   const [medicalLogEditDraft, setMedicalLogEditDraft] = useState({ date: "", content: "", reply: "" });
 
+  const [themes, setThemes] = useState(loadThemes);
+  const [themeDialog, setThemeDialog] = useState(null); // { supporterId, themeId (nullなら新規), text }
+  const [themeHistoryOpenIds, setThemeHistoryOpenIds] = useState(() => new Set());
+  const [themeFlow, setThemeFlow] = useState(null); // { queue: [supporterId...], index, sourceRecordId, onDone }
+
   const [memos, setMemos] = useState(loadMemo);
   const [memoView, setMemoView] = useState("list");
   const [memoDraft, setMemoDraft] = useState({ date: toDateStr(t.year, t.month, t.day), title: "", body: "" });
@@ -148,18 +154,108 @@ export default function App() {
   const [tellPersonEditName, setTellPersonEditName] = useState("");
   const [tellPersonEditType, setTellPersonEditType] = useState("主治医");
 
+  const [medEvents, setMedEvents] = useState(loadMedEvents);
+  const [medSettings, setMedSettings] = useState(loadMedSettings);
+  const [medEventEditId, setMedEventEditId] = useState(null); // null なら新規
+  const [medEventDeleteId, setMedEventDeleteId] = useState(null);
+  const [medYear, setMedYear] = useState(t.year);
+  const [medMonth, setMedMonth] = useState(t.month);
+  const [medDay, setMedDay] = useState(t.day);
+  const [medType, setMedType] = useState("start");
+  const [medLabel, setMedLabel] = useState("");
+  const [medNote, setMedNote] = useState("");
+
+  const openMedEventNew = () => {
+    const t2 = todayStr();
+    setMedEventEditId(null);
+    setMedYear(t2.year); setMedMonth(t2.month); setMedDay(t2.day);
+    setMedType("start"); setMedLabel(""); setMedNote("");
+    setView("medEventForm");
+  };
+  const openMedEventEdit = (ev) => {
+    const [y, m, d] = ev.date.split("-");
+    setMedEventEditId(ev.id);
+    setMedYear(y); setMedMonth(m); setMedDay(d);
+    setMedType(ev.type); setMedLabel(ev.label); setMedNote(ev.note || "");
+    setView("medEventForm");
+  };
+  const saveMedEventForm = () => {
+    const date = toDateStr(medYear, medMonth, medDay);
+    if (medEventEditId) {
+      setMedEvents(prev => updateMedEvent(prev, medEventEditId, { date, type: medType, label: medLabel, note: medNote }));
+    } else {
+      setMedEvents(prev => addMedEvent(prev, { date, type: medType, label: medLabel, note: medNote }));
+    }
+    setView("medEvents");
+  };
+
   const [bridgeSettings, setBridgeSettings] = useState(loadBridgeSettings);
   const [bridgeMemos, setBridgeMemos] = useState(loadBridgeMemos);
   const [bridgeMemoInput, setBridgeMemoInput] = useState("");
   const [bridgePersonId, setBridgePersonId] = useState(null);
   const [bridgeSessionMemoIds, setBridgeSessionMemoIds] = useState(new Set());
   const [bridgeMemoSelectDialog, setBridgeMemoSelectDialog] = useState(null);
+  // Bridge Session中に伝えたいことメモが完了した場合、その場ではテーマ導線を出さず
+  // セッション終了時にまとめて1回だけ出す。複数完了していたら最後に完了したメモのIDを使う。
+  const bridgeCompletedMemoIdRef = useRef(null);
 
   const initBridgeSession = (personId) => {
+    bridgeCompletedMemoIdRef.current = null;
     setBridgePersonId(personId);
     setBridgeMemoInput("");
     setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(personId) && !m.completed).map(m => m.id)));
     setView("bridge");
+  };
+
+  const saveThemeDialog = () => {
+    if (!themeDialog) return;
+    const trimmed = themeDialog.text.trim();
+    if (!trimmed || trimmed.length > THEME_TEXT_MAX) return;
+    if (themeDialog.themeId) {
+      setThemes(prev => updateThemeText(prev, themeDialog.themeId, trimmed));
+    } else {
+      setThemes(prev => createTheme(prev, { supporterId: themeDialog.supporterId, text: trimmed, sourceRecordId: null }));
+    }
+    setThemeDialog(null);
+  };
+
+  const toggleThemeHistory = (supporterId) => {
+    setThemeHistoryOpenIds(prev => {
+      const next = new Set(prev);
+      if (next.has(supporterId)) next.delete(supporterId); else next.add(supporterId);
+      return next;
+    });
+  };
+
+  // 伝えたいことメモ完了時・Bridge Session終了時にテーマ入力を挟むための導線。
+  // 対象支援者を1人ずつ ThemePrompt に渡し、全員分終えたら onDone を呼ぶ。
+  const startThemeFlow = (supporterIds, sourceRecordId, onDone) => {
+    const ids = supporterIds.filter(Boolean);
+    if (ids.length === 0) { onDone(); return; }
+    setThemeFlow({ queue: ids, index: 0, sourceRecordId, onDone });
+  };
+
+  const advanceThemeFlow = () => {
+    if (!themeFlow) return;
+    const nextIndex = themeFlow.index + 1;
+    if (nextIndex >= themeFlow.queue.length) {
+      const done = themeFlow.onDone;
+      setThemeFlow(null);
+      done();
+    } else {
+      setThemeFlow({ ...themeFlow, index: nextIndex });
+    }
+  };
+
+  const endBridgeSession = () => {
+    const personId = bridgePersonId;
+    const sourceRecordId = bridgeCompletedMemoIdRef.current;
+    bridgeCompletedMemoIdRef.current = null;
+    startThemeFlow(personId ? [personId] : [], sourceRecordId, () => {
+      setBridgePersonId(null);
+      setView("medicalTab");
+      setActiveTab("medical");
+    });
   };
 
   const dndSensors = useSensors(useSensor(PointerSensor));
@@ -217,9 +313,11 @@ export default function App() {
       else if (view === "achievement") { setView("records"); setActiveTab("records"); }
       else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
       else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
-      else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "bridge") { endBridgeSession(); }
       else if (view === "bridgeSettings") { if (bridgePersonId) { setView("bridge"); } else { setView("medicalTab"); setActiveTab("medical"); } }
       else if (view === "memo") { setView("records"); setActiveTab("records"); }
+      else if (view === "medEvents") { setView("medicalTab"); setActiveTab("medical"); }
+      else if (view === "medEventForm") { setView("medEvents"); }
       else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
       else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
       else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
@@ -252,6 +350,9 @@ export default function App() {
   useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
+  useEffect(() => { saveThemes(themes); }, [themes]);
+  useEffect(() => { saveMedEvents(medEvents); }, [medEvents]);
+  useEffect(() => { saveMedSettings(medSettings); }, [medSettings]);
   useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); } }, [showPrivacy]);
 
   useEffect(() => {
@@ -644,13 +745,17 @@ export default function App() {
   };
 
   const toggleTellCheck = (memoId, personId) => {
-    setTellMemos(prev => prev.map(m => {
-      if (m.id !== memoId) return m;
-      const cur = m.checks[personId] || { checked: false, reply: "" };
-      const newChecks = { ...m.checks, [personId]: { ...cur, checked: !cur.checked } };
-      const allChecked = m.personIds.length > 0 && m.personIds.every(pid => newChecks[pid]?.checked);
-      return { ...m, checks: newChecks, completed: m.completed || allChecked };
-    }));
+    const memo = tellMemos.find(m => m.id === memoId);
+    if (!memo) return;
+    const cur = memo.checks[personId] || { checked: false, reply: "" };
+    const newChecks = { ...memo.checks, [personId]: { ...cur, checked: !cur.checked } };
+    const allChecked = memo.personIds.length > 0 && memo.personIds.every(pid => newChecks[pid]?.checked);
+    const justCompleted = !memo.completed && allChecked;
+    setTellMemos(prev => prev.map(m => m.id === memoId ? { ...m, checks: newChecks, completed: m.completed || allChecked } : m));
+    if (justCompleted) {
+      if (bridgePersonId) { bridgeCompletedMemoIdRef.current = memoId; }
+      else { startThemeFlow(memo.personIds, memoId, () => {}); }
+    }
   };
 
   const updateTellReply = (memoId, personId, reply) => {
@@ -661,9 +766,15 @@ export default function App() {
   };
 
   const completeTellMemo = (memoId) => {
+    const memo = tellMemos.find(m => m.id === memoId);
+    const justCompleted = memo && !memo.completed;
     setTellMemos(prev => prev.map(m => m.id === memoId ? { ...m, completed: true } : m));
     setView("tellMemos");
     setTellTab("done");
+    if (justCompleted) {
+      if (bridgePersonId) { bridgeCompletedMemoIdRef.current = memoId; }
+      else { startThemeFlow(memo.personIds, memoId, () => {}); }
+    }
   };
 
   const psRecord = records.find((r) => r.id === psId);
@@ -996,12 +1107,14 @@ export default function App() {
               else if (view === "medicalLog") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "medicalLogEdit") { setView("medicalLog"); }
               else if (view === "bridgePerson") { setView("medicalTab"); setActiveTab("medical"); }
-              else if (view === "bridge") { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "bridge") { endBridgeSession(); }
               else if (view === "bridgeSettings") { if (bridgePersonId) { setView("bridge"); } else { setView("medicalTab"); setActiveTab("medical"); } }
               else if (view === "memo") {
                 if (memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 setView("records"); setActiveTab("records");
               }
+              else if (view === "medEvents") { setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "medEventForm") { setView("medEvents"); }
               else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
               else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
@@ -1017,7 +1130,11 @@ export default function App() {
               else if (view === "cbt") { setView("cbtSelect"); }
               else if (view === "ps") { setView("approach"); }
               else { setView("list"); setEditing(false); }
-            }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}><IconArrowLeft size={20} /></button>
+            }} style={view === "bridge"
+              ? { display: "flex", alignItems: "center", gap: 4, background: `${COLORS.danger}18`, border: `1px solid ${COLORS.danger}50`, borderRadius: 8, color: COLORS.danger, cursor: "pointer", fontSize: 13, fontWeight: 700, padding: "5px 10px", lineHeight: 1 }
+              : { background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}>
+              {view === "bridge" ? <><IconX size={14} />終了</> : <IconArrowLeft size={20} />}
+            </button>
           )}
           <div>
             <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700 }}>Stride</div>
@@ -1045,6 +1162,8 @@ export default function App() {
                 {view === "settings" && "設定"}
                 {view === "medicalLog" && "診察等の記録"}
                 {view === "medicalLogEdit" && "記録の編集"}
+                {view === "medEvents" && "おくすりメモ"}
+                {view === "medEventForm" && (medEventEditId ? "おくすりメモを編集" : "おくすりメモを追加")}
                 {view === "bridgePerson" && "Bridge Session"}
                 {view === "bridge" && "Bridge Session"}
                 {view === "bridgeSettings" && "表示項目の設定"}
@@ -1380,9 +1499,129 @@ export default function App() {
                 </div>
               </div>
             </button>
+            <button onClick={() => setView("medEvents")}
+              style={{ width: "100%", background: `linear-gradient(135deg, #34d39915, #34d39905)`, border: `1px solid #34d39940`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconPill size={22} color="#34d399" />
+                <div>
+                  <div style={{ fontSize: 11, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Med Memo</div>
+                  おくすりメモ
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>処方が変わった日や頓服を使った日を記録する</div>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       )}
+
+      {/* MED EVENTS — おくすりメモ一覧 */}
+      {view === "medEvents" && (() => {
+        const sortedMedEvents = [...medEvents].sort((a, b) =>
+          a.date !== b.date ? b.date.localeCompare(a.date) : (b.createdAt || "").localeCompare(a.createdAt || ""));
+        return (
+          <div className="page" style={{ padding: "16px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
+            <button onClick={openMedEventNew}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: "#34d399", color: "#0f1117", fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>
+              ＋ おくすりメモを追加
+            </button>
+            {sortedMedEvents.length === 0 ? (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, lineHeight: 1.7, marginTop: 40, padding: "0 12px" }}>
+                処方が変わった日や頓服を使った日を記録しておくと、気分グラフと一緒に振り返れます
+              </div>
+            ) : (
+              sortedMedEvents.map(ev => (
+                <div key={ev.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: COLORS.textMuted }}>{formatDate(ev.date)}</span>
+                      <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 14, background: "#34d39920", color: "#34d399", fontWeight: 600 }}>{medEventTypeLabel(ev.type)}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => openMedEventEdit(ev)}
+                        style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer" }}>
+                        編集
+                      </button>
+                      <button onClick={() => setMedEventDeleteId(ev.id)}
+                        style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}>
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{ev.label}</div>
+                  {ev.note && <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{ev.note}</div>}
+                </div>
+              ))
+            )}
+            <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          </div>
+        );
+      })()}
+
+      {/* MED EVENT FORM — おくすりメモ 新規/編集 */}
+      {view === "medEventForm" && (() => {
+        const medDateStr = toDateStr(medYear, medMonth, medDay);
+        const medIsFuture = medDateStr > toDateStr(t.year, t.month, t.day);
+        const medLabelValid = medLabel.trim().length > 0 && medLabel.length <= MED_LABEL_MAX;
+        const medNoteValid = medNote.length <= MED_NOTE_MAX;
+        const medFormValid = medLabelValid && medNoteValid && !medIsFuture;
+        const medLabelChips = recentMedLabels(medEvents, 5);
+        return (
+          <div className="page" style={{ padding: "16px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
+              <DateSelector year={medYear} month={medMonth} day={medDay} onYear={setMedYear} onMonth={setMedMonth} onDay={setMedDay} />
+              {medIsFuture && <div style={{ fontSize: 12, color: COLORS.danger, marginTop: 6 }}>未来の日付は記録できません</div>}
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>種別</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {MED_EVENT_TYPES.map(mt => (
+                  <button key={mt.value} onClick={() => setMedType(mt.value)}
+                    style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${medType === mt.value ? "#34d399" : COLORS.border}`, background: medType === mt.value ? "#34d39920" : COLORS.surface, color: medType === mt.value ? "#34d399" : COLORS.textMuted, fontSize: 13, fontWeight: medType === mt.value ? 700 : 400, cursor: "pointer" }}>
+                    {mt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>ラベル</div>
+              <input type="text" value={medLabel} maxLength={MED_LABEL_MAX} onChange={e => setMedLabel(e.target.value)}
+                placeholder="例）頓服、朝の薬"
+                style={{ ...inpStyle(), resize: undefined }} />
+              <div style={{ textAlign: "right", fontSize: 11, color: medLabel.length > MED_LABEL_MAX ? COLORS.danger : COLORS.textMuted, marginTop: 4 }}>
+                {medLabel.length}/{MED_LABEL_MAX}
+              </div>
+              {medLabelChips.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {medLabelChips.map(l => (
+                    <button key={l} onClick={() => setMedLabel(l)}
+                      style={{ padding: "5px 12px", borderRadius: 14, border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.textMuted, fontSize: 12, cursor: "pointer" }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>メモ <span style={{ fontSize: 11 }}>任意</span></div>
+              <textarea rows={3} maxLength={MED_NOTE_MAX} value={medNote} onChange={e => setMedNote(e.target.value)}
+                placeholder="例）1日2回から3回に増量"
+                style={inpStyle()} />
+              <div style={{ textAlign: "right", fontSize: 11, color: medNote.length > MED_NOTE_MAX ? COLORS.danger : COLORS.textMuted, marginTop: 4 }}>
+                {medNote.length}/{MED_NOTE_MAX}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setView("medEvents")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={saveMedEventForm} disabled={!medFormValid}
+                style={{ flex: 2, background: medFormValid ? "#34d399" : COLORS.border, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: medFormValid ? "pointer" : "default" }}>
+                保存する
+              </button>
+            </div>
+            <BottomNav onBack={() => setView("medEvents")} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          </div>
+        );
+      })()}
 
       {/* BRIDGE PERSON SELECT */}
       {view === "bridgePerson" && (
@@ -1420,6 +1659,7 @@ export default function App() {
       {/* BRIDGE SESSION MAIN */}
       {view === "bridge" && (() => {
         const person = tellPeople.find(p => p.id === bridgePersonId);
+        const bridgeActiveTheme = getActiveTheme(themes, bridgePersonId);
         const personAllMemos = tellMemos.filter(m => m.personIds.includes(bridgePersonId) && bridgeSessionMemoIds.has(m.id));
         const personPendingMemos = personAllMemos.filter(m => !m.completed);
         const today = new Date();
@@ -1452,6 +1692,14 @@ export default function App() {
               <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>{person?.name ?? ""}との Session</div>
               <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{todayDs}</div>
             </div>
+
+            {/* 前回からのテーマ */}
+            {bridgeSettings.showTheme && bridgeActiveTheme && (
+              <div style={{ marginBottom: 20, background: COLORS.surfaceWarm, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>次回までのテーマ</div>
+                <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.7, wordBreak: "break-word" }}>{bridgeActiveTheme.text}</div>
+              </div>
+            )}
 
             {/* 伝えたいことメモ（この人が対象の未完了のみ） */}
             {bridgeSettings.showTellMemos && (
@@ -1580,7 +1828,7 @@ export default function App() {
               </div>
             )}
 
-            <BottomNav onBack={() => { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={endBridgeSession} onHome={() => { setView("home"); setActiveTab("home"); }} backLabel="セッションを終了" />
 
             {/* 固定メモ入力パネル */}
             <div style={{ position: "fixed", bottom: "calc(56px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, padding: "12px 16px", zIndex: 150, boxSizing: "border-box" }}>
@@ -1643,6 +1891,7 @@ export default function App() {
         <div className="page" style={{ padding: "16px 16px 100px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20, lineHeight: 1.6 }}>Bridge Sessionに表示する項目を選んでください</div>
           {[
+            { key: "showTheme", label: "次回までのテーマ", color: COLORS.accent },
             { key: "showTellMemos", label: "伝えたいことメモ（未完了）", color: COLORS.psAccent },
             { key: "showMoodGraph", label: "気分のグラフ（直近2週間）", color: COLORS.accent },
             { key: "showSleep", label: "睡眠の記録（直近2週間）", color: COLORS.accent },
@@ -1815,6 +2064,21 @@ export default function App() {
       {view === "tellMemoNew" && (
         <div className="page" style={{ padding: "16px 16px 100px" }}>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>診察やカウンセリングで伝えたいことをメモしておきましょう</div>
+          {(() => {
+            const refs = tellNewPersonIds
+              .map(pid => ({ person: tellPeople.find(p => p.id === pid), theme: getActiveTheme(themes, pid) }))
+              .filter(x => x.person && x.theme);
+            if (refs.length === 0) return null;
+            return (
+              <div style={{ marginBottom: 14 }}>
+                {refs.map(({ person, theme }) => (
+                  <div key={person.id} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                    前回からのテーマ{refs.length > 1 ? `（${person.name}）` : ""}：{theme.text}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <textarea value={tellNewContent} onChange={e => setTellNewContent(e.target.value)}
             placeholder="伝えたいことを書いてください（例：最近眠れていない、薬の副作用が気になる）"
             rows={6}
@@ -2390,6 +2654,59 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+
+                {/* 次回までのテーマ */}
+                {currentPersonId && (() => {
+                  const activeTheme = getActiveTheme(themes, currentPersonId);
+                  const closedThemes = themes
+                    .filter(th => th.supporterId === currentPersonId && th.status === "closed")
+                    .sort((a, b) => (b.closedAt || "").localeCompare(a.closedAt || ""));
+                  const historyOpen = themeHistoryOpenIds.has(currentPersonId);
+                  return (
+                    <div style={{ margin: "16px 16px 0", background: COLORS.surfaceWarm, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                      {activeTheme ? (
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>次回までのテーマ</div>
+                            <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.7, marginBottom: 6, wordBreak: "break-word" }}>{activeTheme.text}</div>
+                            <div style={{ fontSize: 12, color: COLORS.textMuted }}>
+                              {activeTheme.sourceRecordId ? `${formatDateShort(activeTheme.createdAt)}の診察で設定` : formatDateShort(activeTheme.createdAt)}
+                            </div>
+                          </div>
+                          <button onClick={() => setThemeDialog({ supporterId: currentPersonId, themeId: activeTheme.id, text: activeTheme.text })}
+                            style={{ flexShrink: 0, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setThemeDialog({ supporterId: currentPersonId, themeId: null, text: "" })}
+                          style={{ width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, color: COLORS.textMuted, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left" }}>
+                          次回までのテーマは未設定です
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, color: COLORS.accent, fontWeight: 700, flexShrink: 0 }}><IconPlus size={13} />追加</span>
+                        </button>
+                      )}
+                      {closedThemes.length > 0 && (
+                        <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.border}` }}>
+                          <button onClick={() => toggleThemeHistory(currentPersonId)}
+                            style={{ width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: COLORS.textMuted, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            過去のテーマ（{closedThemes.length}）
+                            {historyOpen ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                          </button>
+                          {historyOpen && (
+                            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+                              {closedThemes.map(th => (
+                                <div key={th.id}>
+                                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, wordBreak: "break-word" }}>{th.text}</div>
+                                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>
+                                    {formatDateShort(th.createdAt)}〜{formatDateShort(th.closedAt)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* メモ一覧 */}
                 <div style={{ padding: "16px 16px 0" }}>
@@ -4724,6 +5041,23 @@ export default function App() {
         );
       })()}
 
+      {/* Bridge Session中に他画面へ移動した場合の帯 */}
+      {bridgePersonId && view !== "bridge" && view !== "bridgeSettings" && (
+        <div style={{ position: "fixed", bottom: "calc(56px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, boxSizing: "border-box", background: COLORS.accent, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 210 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0f1117" }}>Bridge Session中</span>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={() => setView("bridge")}
+              style={{ background: "rgba(15,17,23,0.15)", border: "none", borderRadius: 8, color: "#0f1117", fontSize: 12, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>
+              セッションに戻る
+            </button>
+            <button onClick={endBridgeSession}
+              style={{ background: "rgba(15,17,23,0.3)", border: "none", borderRadius: 8, color: "#0f1117", fontSize: 12, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>
+              終了
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ボトムタブバー */}
       <BottomTabBar activeTab={activeTab} onTabChange={(id) => {
         setActiveTab(id);
@@ -4765,7 +5099,28 @@ export default function App() {
               <button onClick={() => setTellPersonDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
                 キャンセル
               </button>
-              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellMemos(prev => prev.map(m => ({ ...m, personIds: m.personIds.filter(pid => pid !== tellPersonDeleteId), checks: Object.fromEntries(Object.entries(m.checks).filter(([k]) => k !== String(tellPersonDeleteId))) }))); setTellPersonDeleteId(null); }}
+              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellMemos(prev => prev.map(m => ({ ...m, personIds: m.personIds.filter(pid => pid !== tellPersonDeleteId), checks: Object.fromEntries(Object.entries(m.checks).filter(([k]) => k !== String(tellPersonDeleteId))) }))); setThemes(prev => deleteThemesForSupporter(prev, tellPersonDeleteId)); setTellPersonDeleteId(null); }}
+                style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* おくすりメモ削除確認ダイアログ */}
+      {medEventDeleteId && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>このおくすりメモを削除しますか？</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              {medEvents.find(e => e.id === medEventDeleteId)?.label}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setMedEventDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                キャンセル
+              </button>
+              <button onClick={() => { setMedEvents(prev => deleteMedEvent(prev, medEventDeleteId)); setMedEventDeleteId(null); }}
                 style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
                 削除する
               </button>
@@ -4809,6 +5164,61 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* テーマ追加・編集ダイアログ */}
+      {themeDialog && (() => {
+        const trimmed = themeDialog.text.trim();
+        const valid = trimmed.length > 0 && themeDialog.text.length <= THEME_TEXT_MAX;
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 350 }}>
+            <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>
+                {themeDialog.themeId ? "次回までのテーマを編集" : "次回までのテーマ"}
+              </div>
+              {!themeDialog.themeId && (
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
+                  診察等で決まった「次回までに見ておくこと」があれば記録できます
+                </div>
+              )}
+              <textarea rows={3} maxLength={THEME_TEXT_MAX} value={themeDialog.text}
+                placeholder={THEME_PLACEHOLDER}
+                onChange={e => setThemeDialog({ ...themeDialog, text: e.target.value })}
+                style={{ ...inpStyle(), marginTop: themeDialog.themeId ? 16 : 0 }} />
+              <div style={{ textAlign: "right", fontSize: 11, color: themeDialog.text.length > THEME_TEXT_MAX ? COLORS.danger : COLORS.textMuted, margin: "4px 0 20px" }}>
+                {themeDialog.text.length}/{THEME_TEXT_MAX}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setThemeDialog(null)}
+                  style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                  キャンセル
+                </button>
+                <button onClick={saveThemeDialog} disabled={!valid}
+                  style={{ flex: 1, background: valid ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: valid ? "pointer" : "default" }}>
+                  保存する
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* テーマ入力導線（伝えたいことメモ完了時・Bridge Session終了時） */}
+      {themeFlow && (() => {
+        const currentSupporterId = themeFlow.queue[themeFlow.index];
+        const activeTheme = getActiveTheme(themes, currentSupporterId);
+        const supporter = tellPeople.find(p => p.id === currentSupporterId);
+        return (
+          <ThemePrompt
+            supporterName={themeFlow.queue.length > 1 ? supporter?.name : null}
+            activeTheme={activeTheme}
+            onContinue={advanceThemeFlow}
+            onCloseOnly={() => { setThemes(prev => closeTheme(prev, activeTheme.id, themeFlow.sourceRecordId)); advanceThemeFlow(); }}
+            onCloseAndNew={() => setThemes(prev => closeTheme(prev, activeTheme.id, themeFlow.sourceRecordId))}
+            onSave={(text) => { setThemes(prev => createTheme(prev, { supporterId: currentSupporterId, text, sourceRecordId: themeFlow.sourceRecordId })); advanceThemeFlow(); }}
+            onSkip={advanceThemeFlow}
+          />
+        );
+      })()}
 
       {/* ヘルプモーダル */}
       {helpModal && (() => {

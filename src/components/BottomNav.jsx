@@ -1,10 +1,10 @@
 import { IconArrowLeft, IconHome, IconPencil, IconBrain, IconStethoscope } from "@tabler/icons-react";
 import { COLORS } from "../constants";
 
-export const BottomNav = ({ onBack, onHome }) => (
+export const BottomNav = ({ onBack, onHome, backLabel = "戻る" }) => (
   <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
     <button onClick={onBack || onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
-      <IconArrowLeft size={16} />戻る
+      <IconArrowLeft size={16} />{backLabel}
     </button>
     <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: "12px", cursor: "pointer" }}>
       <IconHome size={16} />ホーム
