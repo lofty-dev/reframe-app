@@ -14,9 +14,9 @@ export const BRIDGE_MEMOS_KEY = "stride_bridge_memos";
 export const THEMES_KEY = "stride_themes";
 export const MED_EVENTS_KEY = "stride_med_events";
 export const MED_SETTINGS_KEY = "stride_med_settings";
-export const DEFAULT_MED_SETTINGS = { quickTonpukuEnabled: false, quickTonpukuLabel: "頓服" };
+export const DEFAULT_MED_SETTINGS = { quickTonpukuEnabled: false, quickTonpukuLabel: "頓服", quickTonpukuPrompted: false };
 
-export const DEFAULT_BRIDGE_SETTINGS = { showTheme: true, showTellMemos: true, showMoodGraph: true, showSleep: true, showStress: true, showAchievement: true };
+export const DEFAULT_BRIDGE_SETTINGS = { showTheme: true, showTellMemos: true, showMoodGraph: true, showSleep: true, showStress: true, showAchievement: true, showMedEvents: false };
 
 export const normalizeSleep = (s) => s === "4〜6時間" ? "4〜6時間未満" : s === "6〜8時間" ? "6〜8時間未満" : s;
 
@@ -132,7 +132,7 @@ export const loadMedSettings = () => {
 };
 export const saveMedSettings = (d) => { try { localStorage.setItem(MED_SETTINGS_KEY, JSON.stringify(d)); } catch (e) {} };
 
-const generateMedEventId = () => `med_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+export const generateMedEventId = () => `med_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 const isValidMedEventInput = ({ date, type, label }) => {
   if (!MED_EVENT_TYPES.some(t => t.value === type)) return false;

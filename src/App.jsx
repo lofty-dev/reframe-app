@@ -3,7 +3,7 @@ import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
-import { todayStr, toDateStr, formatDate, formatDateShort, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels } from "./storage";
+import { todayStr, toDateStr, formatDate, formatDateShort, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
@@ -184,9 +184,36 @@ export default function App() {
     if (medEventEditId) {
       setMedEvents(prev => updateMedEvent(prev, medEventEditId, { date, type: medType, label: medLabel, note: medNote }));
     } else {
+      const isFirstTonpuku = medType === "tonpuku" && !medEvents.some(ev => ev.type === "tonpuku");
       setMedEvents(prev => addMedEvent(prev, { date, type: medType, label: medLabel, note: medNote }));
+      if (isFirstTonpuku && !medSettings.quickTonpukuEnabled && !medSettings.quickTonpukuPrompted) {
+        setTonpukuPromptOpen(true);
+      }
     }
     setView("medEvents");
+  };
+
+  // 頓服ワンタップ（ホーム画面）
+  const [tonpukuPromptOpen, setTonpukuPromptOpen] = useState(false);
+  const [tonpukuToast, setTonpukuToast] = useState(null); // { id }
+  const tonpukuToastTimerRef = useRef(null);
+
+  const recordQuickTonpuku = () => {
+    const t2 = todayStr();
+    const date = toDateStr(t2.year, t2.month, t2.day);
+    const id = generateMedEventId();
+    const label = (medSettings.quickTonpukuLabel || "頓服").trim().slice(0, MED_LABEL_MAX) || "頓服";
+    const event = { id, date, type: "tonpuku", label, note: "", createdAt: new Date().toISOString() };
+    setMedEvents(prev => [event, ...prev]);
+    setTonpukuToast({ id });
+    if (tonpukuToastTimerRef.current) clearTimeout(tonpukuToastTimerRef.current);
+    tonpukuToastTimerRef.current = setTimeout(() => setTonpukuToast(null), 4000);
+  };
+  const undoQuickTonpuku = () => {
+    if (!tonpukuToast) return;
+    setMedEvents(prev => prev.filter(ev => ev.id !== tonpukuToast.id));
+    if (tonpukuToastTimerRef.current) clearTimeout(tonpukuToastTimerRef.current);
+    setTonpukuToast(null);
   };
 
   const [bridgeSettings, setBridgeSettings] = useState(loadBridgeSettings);
@@ -1286,6 +1313,15 @@ export default function App() {
             </button>
           )}
 
+          {/* 頓服ワンタップ */}
+          {medSettings.quickTonpukuEnabled && (
+            <button onClick={recordQuickTonpuku}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 12, fontWeight: 600, padding: "8px 14px", cursor: "pointer", marginBottom: 16 }}>
+              <IconPill size={14} color="#34d399" />
+              頓服を使った
+            </button>
+          )}
+
           {/* 7日間気分グラフ */}
           {(() => {
             const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -1524,6 +1560,16 @@ export default function App() {
               style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: "#34d399", color: "#0f1117", fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>
               ＋ おくすりメモを追加
             </button>
+            <div onClick={() => setMedSettings(prev => ({ ...prev, quickTonpukuEnabled: !prev.quickTonpukuEnabled }))}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16, cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>ホームにワンタップ記録ボタンを表示</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>「頓服を使った」をホーム画面から1タップで記録できます</div>
+              </div>
+              <div style={{ width: 44, height: 26, borderRadius: 13, background: medSettings.quickTonpukuEnabled ? "#34d399" : COLORS.border, position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: medSettings.quickTonpukuEnabled ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+              </div>
+            </div>
             {sortedMedEvents.length === 0 ? (
               <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, lineHeight: 1.7, marginTop: 40, padding: "0 12px" }}>
                 処方が変わった日や頓服を使った日を記録しておくと、気分グラフと一緒に振り返れます
@@ -1674,6 +1720,12 @@ export default function App() {
         const recentStress = [...records].sort((a, b) => b.id - a.id).slice(0, 5);
         const recentAchievements = [...achievements].sort((a, b) => b.id - a.id).slice(0, 5);
 
+        const medEventDaysSet = bridgeSettings.showMedEvents ? new Set(last14.filter(d => medEvents.some(ev => ev.date === d.ds)).map(d => d.ds)) : new Set();
+        const medEventsInPeriod = bridgeSettings.showMedEvents
+          ? medEvents.filter(ev => last14.some(d => d.ds === ev.date))
+              .sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.createdAt || "").localeCompare(b.createdAt || ""))
+          : [];
+
         const handleSave = () => {
           if (!bridgeMemoInput.trim()) return;
           if (personPendingMemos.length === 0) {
@@ -1746,6 +1798,7 @@ export default function App() {
                           {d.mood !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{d.mood}</div>}
                           <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: d.mood !== null ? 1 : 0.2 }} />
                           <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
+                          {medEventDaysSet.has(d.ds) && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#34d399", marginTop: 1, flexShrink: 0 }} />}
                         </div>
                       );
                     })}
@@ -1772,11 +1825,29 @@ export default function App() {
                             {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
                             <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: lv !== null ? 1 : 0.2 }} />
                             <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
+                            {medEventDaysSet.has(d.ds) && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#34d399", marginTop: 1, flexShrink: 0 }} />}
                           </div>
                         );
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* おくすりメモ凡例（気分・睡眠バー共通） */}
+            {bridgeSettings.showMedEvents && (bridgeSettings.showMoodGraph || bridgeSettings.showSleep) && medEventsInPeriod.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>おくすりメモ</div>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                  {medEventsInPeriod.map(ev => {
+                    const [, em, ed] = ev.date.split("-");
+                    return (
+                      <div key={ev.id} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.8 }}>
+                        <span style={{ color: "#34d399" }}>●</span> {parseInt(em)}/{parseInt(ed)} {medEventTypeLabel(ev.type)}・{ev.label}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1897,6 +1968,7 @@ export default function App() {
             { key: "showSleep", label: "睡眠の記録（直近2週間）", color: COLORS.accent },
             { key: "showStress", label: "ストレス記録（直近5件）", color: COLORS.accent },
             { key: "showAchievement", label: "できたことログ（直近5件）", color: "#e0a855" },
+            { key: "showMedEvents", label: "おくすりメモ", color: "#34d399" },
           ].map(({ key, label, color }) => (
             <div key={key} onClick={() => setBridgeSettings(prev => ({ ...prev, [key]: !prev[key] }))}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
@@ -3828,6 +3900,13 @@ export default function App() {
           };
         });
 
+        // おくすりメモの注釈（気分・睡眠グラフのみ。既存の座標計算・棒の高さには手を加えない）
+        const periodDatesSet = new Set(periodCheckins.map(pc => pc.date));
+        const medEventDateXMap = {};
+        periodCheckins.forEach((pc, i) => { if (medEvents.some(ev => ev.date === pc.date)) medEventDateXMap[pc.date] = dataPoints[i].x; });
+        const medEventsInPeriod = medEvents.filter(ev => periodDatesSet.has(ev.date))
+          .sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.createdAt || "").localeCompare(b.createdAt || ""));
+
         return (
           <PageErrorBoundary>
           <div className="page" style={{ padding: "20px 16px" }}>
@@ -3872,6 +3951,13 @@ export default function App() {
                         const y = H - YPAD - ((v - 1) / (metricMax - 1)) * (H - YPAD * 2);
                         return <line key={`grid-${v}`} x1={CHART_L} y1={y} x2={W - CHART_R} y2={y} stroke={COLORS.border} strokeWidth="0.5" />;
                       })}
+                      {/* おくすりメモの縦点線（グリッド線より前面・棒グラフより背面。気分・睡眠のみ、体調には出さない） */}
+                      {(graphMetric === "mood" || graphMetric === "sleep") && Object.entries(medEventDateXMap).map(([date, x]) => (
+                        <g key={`med-${date}`}>
+                          <line x1={x} y1={YPAD} x2={x} y2={H - YPAD} stroke="#34d399" strokeWidth="1" strokeDasharray="3,3" />
+                          <circle cx={x} cy={YPAD} r="3" fill="#34d399" />
+                        </g>
+                      ))}
                       {/* 棒グラフ */}
                       {dataPoints.map((p, i) => {
                         if (p.val === null) return null;
@@ -3889,6 +3975,20 @@ export default function App() {
                     </svg>
                   )}
                 </div>
+
+                {/* おくすりメモ凡例（気分・睡眠グラフ共通・期間内イベントを古い順。metricごとに1画面1グラフのため重複表示にはならない） */}
+                {(graphMetric === "mood" || graphMetric === "sleep") && medEventsInPeriod.length > 0 && (
+                  <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+                    {medEventsInPeriod.map(ev => {
+                      const [, em, ed] = ev.date.split("-");
+                      return (
+                        <div key={ev.id} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.8 }}>
+                          <span style={{ color: "#34d399" }}>●</span> {parseInt(em)}/{parseInt(ed)} {medEventTypeLabel(ev.type)}・{ev.label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -5125,6 +5225,40 @@ export default function App() {
                 削除する
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 頓服ワンタップ有効化の提案（頓服使用イベント初回保存時に1回だけ） */}
+      {tonpukuPromptOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 350 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>ホームにワンタップ記録ボタンを置きますか？</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              ホーム画面から「頓服を使った」を1タップで記録できるようになります。設定はいつでもおくすりメモ画面から変更できます。
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setMedSettings(prev => ({ ...prev, quickTonpukuPrompted: true })); setTonpukuPromptOpen(false); }}
+                style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                今はしない
+              </button>
+              <button onClick={() => { setMedSettings(prev => ({ ...prev, quickTonpukuEnabled: true, quickTonpukuPrompted: true })); setTonpukuPromptOpen(false); }}
+                style={{ flex: 1, background: "#34d399", border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
+                置く
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 頓服ワンタップ記録トースト（取り消し可） */}
+      {tonpukuToast && (
+        <div style={{ position: "fixed", bottom: (bridgePersonId && view !== "bridge" && view !== "bridgeSettings") ? "calc(112px + env(safe-area-inset-bottom))" : "calc(56px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, boxSizing: "border-box", padding: "0 16px", zIndex: 220 }}>
+          <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
+            <span style={{ fontSize: 13, color: COLORS.text }}>頓服の使用を記録しました</span>
+            <button onClick={undoQuickTonpuku} style={{ background: "none", border: "none", color: "#34d399", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, flexShrink: 0 }}>
+              取り消す
+            </button>
           </div>
         </div>
       )}
