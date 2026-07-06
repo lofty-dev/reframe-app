@@ -3,7 +3,7 @@ import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
-import { todayStr, toDateStr, formatDate, formatDateShort, daysInMonth, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasFeedbackBannerDismissed, setFeedbackBannerDismissed, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
+import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
@@ -60,7 +60,6 @@ export default function App() {
   const [psStep, setPsStep] = useState(0);
   const [psDraft, setPsDraft] = useState({});
   const [psSolutionItems, setPsSolutionItems] = useState([{ id: Date.now(), text: "" }]);
-  const [psSolutionInput, setPsSolutionInput] = useState("");
   const [psBreakdownItems, setPsBreakdownItems] = useState([{ id: Date.now(), text: "" }]);
   const [psReviewId, setPsReviewId] = useState(null);
   const [psReviewDraft, setPsReviewDraft] = useState({ result: "", insight: "" });
@@ -108,7 +107,6 @@ export default function App() {
   const [copingGuidePrompt, setCopingGuidePrompt] = useState(false);
   const [crisisGuidePrompt, setCrisisGuidePrompt] = useState(false);
 
-  const [graphType, setGraphType] = useState("line"); // "line" | "bar"
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
   const [graphMetric, setGraphMetric] = useState("mood"); // "mood" | "condition" | "sleep"
   const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
@@ -311,7 +309,6 @@ export default function App() {
 
   const [pwaPrompted, setPwaPromptedState] = useState(hasPwaPrompted);
   const [showPwaGuide, setShowPwaGuide] = useState(false);
-  const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -550,21 +547,6 @@ export default function App() {
     const valB = copingSort === "difficulty" ? b.difficulty : b.effect;
     return copingSortDir === "asc" ? valA - valB : valB - valA;
   });
-
-  const recentCheckins = (() => {
-    const result = [];
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const y = String(d.getFullYear());
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      const dateStr = toDateStr(y, m, day);
-      const found = checkins.find((c) => c.date === dateStr);
-      result.push({ date: dateStr, data: found || null });
-    }
-    return result;
-  })();
 
   const saveCoping = () => {
     if (!newCoping.text.trim() || !newCoping.difficulty || !newCoping.effect) return;
@@ -1252,27 +1234,6 @@ export default function App() {
               <button onClick={() => { setPwaPromptedState(false); }}
                 style={{ flexShrink: 0, background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, borderRadius: 8, color: COLORS.accent, fontSize: 11, fontWeight: 700, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>
                 追加方法を見る
-              </button>
-            </div>
-          )}
-
-          {/* フィードバックバナー */}
-          {showFeedbackBanner && (
-            <div style={{ background: COLORS.surface, borderRadius: 12, padding: "10px 14px", marginBottom: 16, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
-              <div style={{ flex: 1, paddingRight: 20 }}>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.6 }}>
-                  この度はアプリを使っていただきありがとうございます！<br />よろしければ使ってみた感想や要望を教えてください！
-                </div>
-                <button
-                  onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSexa5H2X037mrCEGrOwcRil-VWOlz3byyCVcQmJ3cAqMKIy9g/viewform?usp=publish-editor", "_blank")}
-                  style={{ marginTop: 6, background: "none", border: "none", padding: 0, color: COLORS.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
-                  フィードバックフォームを開く →
-                </button>
-              </div>
-              <button
-                onClick={() => { setFeedbackBannerDismissed(); setShowFeedbackBanner(false); }}
-                style={{ position: "absolute", top: 8, right: 10, background: "none", border: "none", color: COLORS.textMuted, fontSize: 16, cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.6 }}>
-                ×
               </button>
             </div>
           )}
