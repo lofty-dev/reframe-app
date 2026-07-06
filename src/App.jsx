@@ -5166,7 +5166,7 @@ export default function App() {
 
       {/* メモ削除確認ダイアログ */}
       {tellMemoDeleteId && (
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
           <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>このメモを削除しますか？</div>
             <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24, maxHeight: 80, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
@@ -5176,7 +5176,7 @@ export default function App() {
               <button onClick={() => setTellMemoDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
                 キャンセル
               </button>
-              <button onClick={() => { setTellMemos(prev => prev.filter(m => m.id !== tellMemoDeleteId)); setTellMemoDeleteId(null); setView("tellMemos"); }}
+              <button onClick={() => { setTellMemos(prev => prev.filter(m => m.id !== tellMemoDeleteId)); setTellMemoDeleteId(null); }}
                 style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
                 削除する
               </button>
