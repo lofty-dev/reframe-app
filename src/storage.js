@@ -268,14 +268,6 @@ export const setPwaPrompted = () => {
   try { localStorage.setItem(PWA_KEY, "true"); } catch (e) {}
 };
 
-export const FEEDBACK_BANNER_KEY = "stride_feedback_banner_dismissed";
-export const hasFeedbackBannerDismissed = () => {
-  try { return localStorage.getItem(FEEDBACK_BANNER_KEY) === "true"; } catch (e) { return false; }
-};
-export const setFeedbackBannerDismissed = () => {
-  try { localStorage.setItem(FEEDBACK_BANNER_KEY, "true"); } catch (e) {}
-};
-
 const ALL_STORAGE_KEYS = [
   "reframe_records", "reframe_checkins", "reframe_copings",
   "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",

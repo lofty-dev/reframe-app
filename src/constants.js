@@ -14,7 +14,7 @@ export const MED_NOTE_MAX = 100;
 
 export const THEME_KEY = "stride_theme";
 
-export const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満": "6〜7時間" };
+const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満": "6〜7時間" };
 export const sleepLabel = (s) => SLEEP_DISPLAY[s] || s;
 
 export const ANNOUNCEMENTS = [
