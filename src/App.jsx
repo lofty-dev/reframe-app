@@ -772,16 +772,18 @@ export default function App() {
   };
 
   const toggleTellCheck = (memoId, personId) => {
-    const memo = tellMemos.find(m => m.id === memoId);
-    if (!memo) return;
-    const cur = memo.checks[personId] || { checked: false, reply: "" };
-    const newChecks = { ...memo.checks, [personId]: { ...cur, checked: !cur.checked } };
-    const allChecked = memo.personIds.length > 0 && memo.personIds.every(pid => newChecks[pid]?.checked);
-    const justCompleted = !memo.completed && allChecked;
-    setTellMemos(prev => prev.map(m => m.id === memoId ? { ...m, checks: newChecks, completed: m.completed || allChecked } : m));
-    if (justCompleted) {
+    let justCompletedPersonIds = null;
+    setTellMemos(prev => prev.map(m => {
+      if (m.id !== memoId) return m;
+      const cur = m.checks[personId] || { checked: false, reply: "" };
+      const newChecks = { ...m.checks, [personId]: { ...cur, checked: !cur.checked } };
+      const allChecked = m.personIds.length > 0 && m.personIds.every(pid => newChecks[pid]?.checked);
+      if (!m.completed && allChecked) justCompletedPersonIds = m.personIds;
+      return { ...m, checks: newChecks, completed: m.completed || allChecked };
+    }));
+    if (justCompletedPersonIds) {
       if (bridgePersonId) { bridgeCompletedMemoIdRef.current = memoId; }
-      else { startThemeFlow(memo.personIds, memoId, () => {}); }
+      else { startThemeFlow(justCompletedPersonIds, memoId, () => {}); }
     }
   };
 
