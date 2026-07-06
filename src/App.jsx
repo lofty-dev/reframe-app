@@ -228,7 +228,7 @@ export default function App() {
     bridgeCompletedMemoIdRef.current = null;
     setBridgePersonId(personId);
     setBridgeMemoInput("");
-    setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(personId) && !m.completed).map(m => m.id)));
+    setBridgeSessionMemoIds(() => new Set(tellMemos.filter(m => m.personIds.includes(personId) && !m.completed).map(m => m.id)));
     setView("bridge");
   };
 
@@ -565,7 +565,7 @@ export default function App() {
   const saveCheckin = () => {
     if (!checkinDraft.mood) return;
     const entry = { id: todayCheckin ? todayCheckin.id : Date.now(), date: toDateStr(t.year, t.month, t.day), ...checkinDraft };
-    setCheckins([entry, ...checkins.filter((c) => c.date !== entry.date)]);
+    setCheckins(prev => [entry, ...prev.filter((c) => c.date !== entry.date)]);
     setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" });
     setView("home");
     setActiveTab("home");
@@ -576,7 +576,7 @@ export default function App() {
 
   const saveNew = () => {
     if (!newSituation.trim()) return;
-    setRecords([{ id: Date.now(), date: toDateStr(newYear, newMonth, newDay), situation: newSituation, category: newCategory, intensity: newIntensity, firstThought: newFirstThought.trim() || null, completed: false, cbt: {} }, ...records]);
+    setRecords(prev => [{ id: Date.now(), date: toDateStr(newYear, newMonth, newDay), situation: newSituation, category: newCategory, intensity: newIntensity, firstThought: newFirstThought.trim() || null, completed: false, cbt: {} }, ...prev]);
     setNewSituation("");
     setNewCategory(null);
     setNewIntensity(null);
@@ -588,7 +588,7 @@ export default function App() {
   };
 
   const toggleComplete = (id) => {
-    setRecords(records.map((r) => r.id === id ? { ...r, completed: !r.completed } : r));
+    setRecords(prev => prev.map((r) => r.id === id ? { ...r, completed: !r.completed } : r));
   };
 
   const deleteRecord = (id) => {
@@ -606,7 +606,7 @@ export default function App() {
   };
 
   const saveEdit = () => {
-    setRecords(records.map((r) => r.id === detailId ? { ...r, date: toDateStr(editYear, editMonth, editDay), situation: editSituation, cbt: editCbt, ps: editPs } : r));
+    setRecords(prev => prev.map((r) => r.id === detailId ? { ...r, date: toDateStr(editYear, editMonth, editDay), situation: editSituation, cbt: editCbt, ps: editPs } : r));
     setEditing(false);
   };
 
@@ -638,12 +638,12 @@ export default function App() {
   };
 
   const finishCBT = () => {
-    setRecords(records.map((r) => r.id === cbtId ? { ...r, completed: true, cbt: cbtDraft } : r));
+    setRecords(prev => prev.map((r) => r.id === cbtId ? { ...r, completed: true, cbt: cbtDraft } : r));
     setView("list");
   };
 
   const saveCBTDraft = () => {
-    setRecords(records.map((r) => r.id === cbtId ? { ...r, completed: false, cbt: cbtDraft } : r));
+    setRecords(prev => prev.map((r) => r.id === cbtId ? { ...r, completed: false, cbt: cbtDraft } : r));
     setView("list");
   };
 
@@ -660,12 +660,12 @@ export default function App() {
   };
 
   const finishPS = () => {
-    setRecords(records.map((r) => r.id === psId ? { ...r, ps: { ...psDraft, status: "planned" } } : r));
+    setRecords(prev => prev.map((r) => r.id === psId ? { ...r, ps: { ...psDraft, status: "planned" } } : r));
     setView("list");
   };
 
   const savePSDraft = () => {
-    setRecords(records.map((r) => r.id === psId ? { ...r, completed: false, ps: psDraft } : r));
+    setRecords(prev => prev.map((r) => r.id === psId ? { ...r, completed: false, ps: psDraft } : r));
     setView("list");
   };
 
@@ -692,7 +692,7 @@ export default function App() {
   };
 
   const confirmCoping = (coping) => {
-    setRecords(records.map((r) => r.id === copingSelectId ? { ...r, coping, copingStatus: "pending" } : r));
+    setRecords(prev => prev.map((r) => r.id === copingSelectId ? { ...r, coping, copingStatus: "pending" } : r));
     setCopingConfirm(null);
     setView("list");
   };
@@ -740,7 +740,7 @@ export default function App() {
 
   const saveTellMemo = () => {
     if (!tellNewContent.trim() || tellNewPersonIds.length === 0) return;
-    setTellMemos([{ id: Date.now(), date: toDateStr(t.year, t.month, t.day), content: tellNewContent, personIds: [...tellNewPersonIds], checks: {}, completed: false }, ...tellMemos]);
+    setTellMemos(prev => [{ id: Date.now(), date: toDateStr(t.year, t.month, t.day), content: tellNewContent, personIds: [...tellNewPersonIds], checks: {}, completed: false }, ...prev]);
     setTellNewContent("");
     setTellNewPersonIds([]);
     setView("tellMemos");
@@ -748,11 +748,14 @@ export default function App() {
 
   const addTellPerson = () => {
     if (!tellNewPersonName.trim()) return;
-    setTellPeople([...tellPeople, { id: Date.now(), name: tellNewPersonName, type: tellNewPersonType }]);
+    setTellPeople(prev => [...prev, { id: Date.now(), name: tellNewPersonName, type: tellNewPersonType }]);
     setTellNewPersonName("");
     setTellNewPersonType("主治医");
   };
 
+  // この2関数（toggleTellCheck / updateTellReply）は同一ハンドラ内で連続実行される。
+  // 必ず関数型updaterかつprev由来のデータのみで構築すること。
+  // レンダー時点のtellMemosを参照する形に変えると2026-07-06のreply消失バグが再発する。
   const toggleTellCheck = (memoId, personId) => {
     let justCompletedPersonIds = null;
     setTellMemos(prev => prev.map(m => {
@@ -2308,7 +2311,7 @@ export default function App() {
 
         const saveAchievement = () => {
           if (!achievementText.trim()) return;
-          setAchievements([{ id: Date.now(), date: todayStr2, text: achievementText.trim() }, ...achievements]);
+          setAchievements(prev => [{ id: Date.now(), date: todayStr2, text: achievementText.trim() }, ...prev]);
           setAchievementText("");
         };
 
@@ -2445,7 +2448,7 @@ export default function App() {
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setAchievementDeleteId(null)}
                       style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
-                    <button onClick={() => { setAchievements(achievements.filter(a => a.id !== achievementDeleteId)); setAchievementDeleteId(null); }}
+                    <button onClick={() => { setAchievements(prev => prev.filter(a => a.id !== achievementDeleteId)); setAchievementDeleteId(null); }}
                       style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>削除する</button>
                   </div>
                 </div>
@@ -2855,7 +2858,7 @@ export default function App() {
               <button onClick={() => setMemoView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
               <button onClick={() => {
                 if (!memoDraft.body.trim()) return;
-                setMemos([{ id: Date.now(), ...memoDraft }, ...memos]);
+                setMemos(prev => [{ id: Date.now(), ...memoDraft }, ...prev]);
                 setMemoDraft({ date: toDateStr(t.year, t.month, t.day), title: "", body: "" });
                 setMemoView("list");
               }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
@@ -2873,7 +2876,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                   <button onClick={() => { setMemoEditDraft({...detailMemo}); setMemoEditing(true); }}
                     style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>編集</button>
-                  <button onClick={() => { setMemos(memos.filter(m => m.id !== detailMemo.id)); setMemoView("list"); }}
+                  <button onClick={() => { setMemos(prev => prev.filter(m => m.id !== detailMemo.id)); setMemoView("list"); }}
                     style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>削除</button>
                 </div>
                 <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
@@ -2892,7 +2895,7 @@ export default function App() {
                 </div>
                 <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                   <button onClick={() => setMemoEditing(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
-                  <button onClick={() => { setMemos(memos.map(m => m.id === detailMemo.id ? {...m, ...memoEditDraft} : m)); setMemoEditing(false); }}
+                  <button onClick={() => { setMemos(prev => prev.map(m => m.id === detailMemo.id ? {...m, ...memoEditDraft} : m)); setMemoEditing(false); }}
                     style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
                 </div>
               </>
@@ -3426,8 +3429,12 @@ export default function App() {
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
                   <button onClick={() => {
                     if (!copingEditText.trim() || !copingEditDifficulty || !copingEditEffect) return;
-                    const updated = copings.map(c => c.id === copingEditId ? { ...c, text: copingEditText.trim(), difficulty: copingEditDifficulty, effect: copingEditEffect } : c);
-                    setCopings(updated); saveCopings(updated); setCopingEditId(null);
+                    let updated;
+                    setCopings(prev => {
+                      updated = prev.map(c => c.id === copingEditId ? { ...c, text: copingEditText.trim(), difficulty: copingEditDifficulty, effect: copingEditEffect } : c);
+                      return updated;
+                    });
+                    saveCopings(updated); setCopingEditId(null);
                   }} disabled={!copingEditText.trim() || !copingEditDifficulty || !copingEditEffect}
                     style={{ flex: 2, background: copingEditText.trim() && copingEditDifficulty && copingEditEffect ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingEditText.trim() && copingEditDifficulty && copingEditEffect ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>保存する</button>
                 </div>
