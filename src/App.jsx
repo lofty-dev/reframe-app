@@ -319,6 +319,19 @@ export default function App() {
   useEffect(() => { initialMount.current = false; }, []);
 
   useEffect(() => {
+    if (navigator.storage && navigator.storage.persist) {
+      (async () => {
+        try {
+          const granted = await navigator.storage.persist();
+          console.log("storage persist:", granted ? "granted" : "denied");
+        } catch (e) {
+          console.log("storage persist error:", e);
+        }
+      })();
+    }
+  }, []);
+
+  useEffect(() => {
     if (view !== "home") {
       window.history.pushState({ view }, "", "");
     }
