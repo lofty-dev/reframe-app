@@ -11,6 +11,15 @@ import { DateSelector } from "./components/DateSelector";
 import { EmotionInput, AutoThoughtInput } from "./components/EmotionInput";
 import { SortablePersonItem } from "./components/SortablePersonItem";
 import { ThemePrompt } from "./components/ThemePrompt";
+import { trackEvent } from "./analytics";
+
+const CRISIS_STAGE_BY_TYPE = {
+  safe: "safe",
+  caution_triggers: "caution",
+  caution_signs: "caution",
+  crisis_signs: "crisis",
+  crisis_contacts: "crisis",
+};
 
 export default function App() {
   const t = todayStr();
@@ -276,6 +285,7 @@ export default function App() {
     const personId = bridgePersonId;
     const sourceRecordId = bridgeCompletedMemoIdRef.current;
     bridgeCompletedMemoIdRef.current = null;
+    if (personId) trackEvent("bridge_session_completed");
     startThemeFlow(personId ? [personId] : [], sourceRecordId, () => {
       setBridgePersonId(null);
       setView("medicalTab");
@@ -728,10 +738,12 @@ export default function App() {
   const addCrisisItem = (type, text, text2 = "") => {
     const item = { id: Date.now(), text, text2 };
     setCrisisPlan((prev) => ({ ...prev, [type]: [...prev[type], item] }));
+    trackEvent("crisis_plan_saved", { stage: CRISIS_STAGE_BY_TYPE[type] || "unknown" });
   };
 
   const updateCrisisItem = (type, id, text, text2 = "") => {
     setCrisisPlan((prev) => ({ ...prev, [type]: prev[type].map((i) => i.id === id ? { ...i, text, text2 } : i) }));
+    trackEvent("crisis_plan_saved", { stage: CRISIS_STAGE_BY_TYPE[type] || "unknown" });
   };
 
   const deleteCrisisItem = (type, id) => {
@@ -757,16 +769,30 @@ export default function App() {
   // 必ず関数型updaterかつprev由来のデータのみで構築すること。
   // レンダー時点のtellMemosを参照する形に変えると2026-07-06のreply消失バグが再発する。
   const toggleTellCheck = (memoId, personId) => {
+    // 副作用（テーマ導線・GA4計測）を発火するかどうかは、setState内のupdaterではなく
+    // レンダー時点のtellMemosを見て事前に判定する。updater関数はReactのイベントバッチング
+    // により非同期に実行されるため、updater内で代入した変数をこの直後で読んでも
+    // 常にnullになり判定できない（stateの書き込み自体は引き続き関数型updaterで行う）。
+    const targetMemo = tellMemos.find(m => m.id === memoId);
     let justCompletedPersonIds = null;
+    if (targetMemo && !targetMemo.completed) {
+      const cur = targetMemo.checks[personId] || { checked: false, reply: "" };
+      const willBeChecked = !cur.checked;
+      const allChecked = targetMemo.personIds.length > 0 && targetMemo.personIds.every(pid => {
+        if (pid === personId) return willBeChecked;
+        return targetMemo.checks[pid]?.checked || false;
+      });
+      if (allChecked) justCompletedPersonIds = targetMemo.personIds;
+    }
     setTellMemos(prev => prev.map(m => {
       if (m.id !== memoId) return m;
       const cur = m.checks[personId] || { checked: false, reply: "" };
       const newChecks = { ...m.checks, [personId]: { ...cur, checked: !cur.checked } };
       const allChecked = m.personIds.length > 0 && m.personIds.every(pid => newChecks[pid]?.checked);
-      if (!m.completed && allChecked) justCompletedPersonIds = m.personIds;
       return { ...m, checks: newChecks, completed: m.completed || allChecked };
     }));
     if (justCompletedPersonIds) {
+      trackEvent("tell_memo_completed");
       if (bridgePersonId) { bridgeCompletedMemoIdRef.current = memoId; }
       else { startThemeFlow(justCompletedPersonIds, memoId, () => {}); }
     }
@@ -786,6 +812,7 @@ export default function App() {
     setView("tellMemos");
     setTellTab("done");
     if (justCompleted) {
+      trackEvent("tell_memo_completed");
       if (bridgePersonId) { bridgeCompletedMemoIdRef.current = memoId; }
       else { startThemeFlow(memo.personIds, memoId, () => {}); }
     }
