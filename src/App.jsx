@@ -12,6 +12,9 @@ import { EmotionInput, AutoThoughtInput } from "./components/EmotionInput";
 import { SortablePersonItem } from "./components/SortablePersonItem";
 import { ThemePrompt } from "./components/ThemePrompt";
 
+// ホーム画面の「お知らせ」セクションの表示ON/OFF。データ(ANNOUNCEMENTS)は残したまま非表示にする場合はfalseにする。
+const SHOW_ANNOUNCEMENTS = false;
+
 export default function App() {
   const t = todayStr();
   const [view, setView] = useState("home");
@@ -1353,20 +1356,22 @@ export default function App() {
           </button>
 
           {/* お知らせ */}
-          <div style={{ marginTop: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <IconBell size={16} color={COLORS.textMuted} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>お知らせ</div>
+          {SHOW_ANNOUNCEMENTS && (
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <IconBell size={16} color={COLORS.textMuted} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>お知らせ</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {ANNOUNCEMENTS.map((a, i) => (
+                  <div key={i} style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>{a.date}</div>
+                    <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{a.content}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {ANNOUNCEMENTS.map((a, i) => (
-                <div key={i} style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>{a.date}</div>
-                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{a.content}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
