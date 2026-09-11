@@ -1206,7 +1206,7 @@ export default function App() {
                 {view === "new" && "出来事を記録"}
                 {view === "checkin" && "今日のチェックイン"}
                 {view === "checkinHistory" && "チェックイン履歴"}
-                {view === "checkinEdit" && "チェックインを編集"}
+                {view === "checkinEdit" && (checkins.some(c => c.date === checkinEditDate) ? "チェックインを編集" : "チェックインを記録")}
                 {view === "copingDetail" && "コーピングの詳細"}
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
