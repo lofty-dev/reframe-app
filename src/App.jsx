@@ -3300,6 +3300,21 @@ export default function App() {
                     <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: rec.completed ? COLORS.textMuted : COLORS.text, textDecoration: rec.completed ? "line-through" : "none" }}>
                       {rec.situation}
                     </div>
+                    {rec.completed && (() => {
+                      const usedApproaches = [
+                        rec.cbt && Object.keys(rec.cbt).length > 0 ? { label: "認知再構成", color: COLORS.accent } : null,
+                        rec.ps && Object.keys(rec.ps).length > 0 ? { label: "問題解決", color: "#818cf8" } : null,
+                        rec.coping ? { label: "コーピング", color: "#e0a855" } : null,
+                      ].filter(Boolean);
+                      if (usedApproaches.length === 0) return null;
+                      return (
+                        <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                          {usedApproaches.map(({ label, color }) => (
+                            <span key={label} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: `${color}15`, color, fontWeight: 600 }}>{label}</span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleteTargetId(rec.id); }}
