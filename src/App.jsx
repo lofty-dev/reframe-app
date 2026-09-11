@@ -3345,10 +3345,15 @@ export default function App() {
                         <div style={{ marginTop: 8, fontSize: 12, color: "#e0a855", display: "flex", alignItems: "center", gap: 4 }}>✓ コーピング：{rec.copingReview}</div>
                       )}
                       {hasPsPlanned && (
-                        <button onClick={() => startPsReview(rec.id)}
-                          style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-                          🕐 振り返りを記録する
-                        </button>
+                        <>
+                          {rec.ps?.selectPlan && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{rec.ps.selectPlan}</div>
+                          )}
+                          <button onClick={() => startPsReview(rec.id)}
+                            style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                            🕐 振り返りを記録する
+                          </button>
+                        </>
                       )}
                       {hasPsDone && (
                         <div style={{ marginTop: 8, fontSize: 12, color: COLORS.accent, display: "flex", alignItems: "center", gap: 4 }}>✓ 振り返り完了</div>
