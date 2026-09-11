@@ -3347,7 +3347,10 @@ export default function App() {
                       {hasPsPlanned && (
                         <>
                           {rec.ps?.selectPlan && (
-                            <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{rec.ps.selectPlan}</div>
+                            <div style={{ marginTop: 8 }}>
+                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "#818cf815", color: "#818cf8", fontWeight: 600 }}>問題解決</span>
+                              <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, marginTop: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{rec.ps.selectPlan}</div>
+                            </div>
                           )}
                           <button onClick={() => startPsReview(rec.id)}
                             style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
