@@ -404,6 +404,15 @@ export default function App() {
   useEffect(() => { saveMedEvents(medEvents); }, [medEvents]);
   useEffect(() => { saveMedSettings(medSettings); }, [medSettings]);
   useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); } }, [showPrivacy]);
+  useEffect(() => {
+    const resetScroll = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    resetScroll();
+    requestAnimationFrame(resetScroll);
+  }, [view]);
 
   useEffect(() => {
     if (view !== "mindfulness" && mfRunning) {
