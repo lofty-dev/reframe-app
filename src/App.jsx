@@ -3,7 +3,7 @@ import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
-import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
+import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, upsertCheckin, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
 import { inpStyle } from "./styles";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
@@ -590,8 +590,7 @@ export default function App() {
 
   const saveCheckin = () => {
     if (!checkinDraft.mood) return;
-    const entry = { id: todayCheckin ? todayCheckin.id : Date.now(), date: toDateStr(t.year, t.month, t.day), ...checkinDraft };
-    setCheckins(prev => [entry, ...prev.filter((c) => c.date !== entry.date)]);
+    setCheckins(prev => upsertCheckin(prev, { date: toDateStr(t.year, t.month, t.day), ...checkinDraft }));
     setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" });
     setView("home");
     setActiveTab("home");
@@ -1207,7 +1206,7 @@ export default function App() {
                 {view === "new" && "出来事を記録"}
                 {view === "checkin" && "今日のチェックイン"}
                 {view === "checkinHistory" && "チェックイン履歴"}
-                {view === "checkinEdit" && "チェックインを編集"}
+                {view === "checkinEdit" && (checkins.some(c => c.date === checkinEditDate) ? "チェックインを編集" : "チェックインを記録")}
                 {view === "copingDetail" && "コーピングの詳細"}
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
@@ -4161,23 +4160,27 @@ export default function App() {
               );
             })()}
 
-            {/* 一覧タブ */}
+            {/* 一覧タブ：直近checkinListCount日分を日付ベースで生成し、記録がない日も行として出す（当日はホーム画面限定のためここには含めない） */}
             {historyTab === "list" && (() => {
-              const allCheckins = [...checkins].sort((a, b) => b.date.localeCompare(a.date));
-              const todayStr2 = toDateStr(t.year, t.month, t.day);
+              const listDays = Array.from({ length: checkinListCount }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (i + 1));
+                const y = String(d.getFullYear());
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                const dateStr = toDateStr(y, m, day);
+                const found = checkins.find((c) => c.date === dateStr);
+                return { date: dateStr, data: found || null, label: `${parseInt(m)}/${parseInt(day)}` };
+              });
               return (
                 <div key="list" className="page" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {allCheckins.slice(0, checkinListCount).map((data) => {
-                    const isToday = data.date === todayStr2;
-                    const [, dm, dd] = data.date.split("-");
-                    const label = `${parseInt(dm)}/${parseInt(dd)}`;
-                    return (
-                      <div key={data.date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${COLORS.accentSoft}` }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{ minWidth: 48 }}>
-                            <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
-                            {isToday && <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700 }}>今日</div>}
-                          </div>
+                  {listDays.map(({ date, data, label }) => (
+                    <div key={date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${COLORS.accentSoft}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ minWidth: 48 }}>
+                          <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
+                        </div>
+                        {data ? (
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                               <div style={{ flex: 1, height: 6, borderRadius: 3, background: COLORS.border, overflow: "hidden" }}>
@@ -4191,27 +4194,26 @@ export default function App() {
                             </div>
                             {data.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4, lineHeight: 1.5 }}>「{data.memo}」</div>}
                           </div>
-                          <button onClick={() => {
-                            setCheckinEditDate(data.date);
-                            setCheckinEditDraft({ mood: data.mood, condition: data.condition, sleep: data.sleep, memo: data.memo || "" });
-                            setView("checkinEdit");
-                          }}
-                            style={{ flexShrink: 0, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 11, padding: "5px 10px" }}>
-                            編集
-                          </button>
-                        </div>
+                        ) : (
+                          <div style={{ flex: 1, fontSize: 12, color: COLORS.textMuted }}>記録なし</div>
+                        )}
+                        <button onClick={() => {
+                          setCheckinEditDate(date);
+                          setCheckinEditDraft(data
+                            ? { mood: data.mood, condition: data.condition, sleep: data.sleep, memo: data.memo || "" }
+                            : { mood: 5, condition: null, sleep: null, memo: "" });
+                          setView("checkinEdit");
+                        }}
+                          style={{ flexShrink: 0, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 11, padding: "5px 10px" }}>
+                          {data ? "編集" : "記録する"}
+                        </button>
                       </div>
-                    );
-                  })}
-                  {allCheckins.length === 0 && (
-                    <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>まだ記録がありません</div>
-                  )}
-                  {allCheckins.length > checkinListCount && (
-                    <button onClick={() => setCheckinListCount(checkinListCount + 14)}
-                      style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 4 }}>
-                      もっと見る（残り{allCheckins.length - checkinListCount}件）
-                    </button>
-                  )}
+                    </div>
+                  ))}
+                  <button onClick={() => setCheckinListCount(checkinListCount + 14)}
+                    style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 4 }}>
+                    もっと見る
+                  </button>
                 </div>
               );
             })()}
@@ -4287,9 +4289,10 @@ export default function App() {
       {/* CHECKIN EDIT */}
       {view === "checkinEdit" && (() => {
         const editDateLabel = checkinEditDate ? (() => { const [, m, d] = checkinEditDate.split("-"); return `${parseInt(m)}月${parseInt(d)}日`; })() : "";
+        const isExistingCheckin = checkins.some(c => c.date === checkinEditDate);
         return (
           <div className="page" style={{ padding: "24px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>{editDateLabel}のチェックインを編集</div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>{editDateLabel}のチェックインを{isExistingCheckin ? "編集" : "記録"}</div>
             {/* 気分スコア */}
             <div style={{ marginBottom: 28 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
@@ -4344,7 +4347,7 @@ export default function App() {
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setView("checkinHistory")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
               <button onClick={() => {
-                setCheckins(prev => prev.map(c => c.date === checkinEditDate ? { ...c, ...checkinEditDraft } : c));
+                setCheckins(prev => upsertCheckin(prev, { date: checkinEditDate, ...checkinEditDraft }));
                 setView("checkinHistory");
               }}
                 style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>

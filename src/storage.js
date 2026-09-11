@@ -248,6 +248,20 @@ export const saveCheckins = (checkins) => {
   try { localStorage.setItem(CHECKIN_KEY, JSON.stringify(checkins)); } catch (e) {}
 };
 
+const isFutureDate = (date) => {
+  const t = todayStr();
+  return date > toDateStr(t.year, t.month, t.day);
+};
+
+// 当日の新規保存・当日/過去日の編集・過去の空白日への新規追加を同じ経路で扱う。
+// 未来日は addMedEvent と同様に無変更で返す（対象日が既存なら更新、なければ新規追加）。
+export const upsertCheckin = (checkins, { date, mood, condition, sleep, memo }) => {
+  if (!date || isFutureDate(date)) return checkins;
+  const existing = checkins.find(c => c.date === date);
+  const entry = { id: existing ? existing.id : Date.now(), date, mood, condition, sleep, memo };
+  return [entry, ...checkins.filter(c => c.date !== date)];
+};
+
 export const loadCopings = () => {
   try {
     const saved = localStorage.getItem(COPING_KEY);
