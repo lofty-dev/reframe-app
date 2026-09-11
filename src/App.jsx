@@ -3302,15 +3302,20 @@ export default function App() {
                     </div>
                     {rec.completed && (() => {
                       const usedApproaches = [
-                        rec.cbt && Object.keys(rec.cbt).length > 0 ? { label: "認知再構成", color: COLORS.accent } : null,
-                        rec.ps && Object.keys(rec.ps).length > 0 ? { label: "問題解決", color: "#818cf8" } : null,
-                        rec.coping ? { label: "コーピング", color: "#e0a855" } : null,
+                        rec.cbt && Object.keys(rec.cbt).length > 0 ? { label: "認知再構成", color: COLORS.accent, detail: rec.cbt.balanced } : null,
+                        rec.ps && Object.keys(rec.ps).length > 0 ? { label: "問題解決", color: "#818cf8", detail: rec.ps.selectPlan } : null,
+                        rec.coping ? { label: "コーピング", color: "#e0a855", detail: rec.coping } : null,
                       ].filter(Boolean);
                       if (usedApproaches.length === 0) return null;
                       return (
-                        <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                          {usedApproaches.map(({ label, color }) => (
-                            <span key={label} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: `${color}15`, color, fontWeight: 600 }}>{label}</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                          {usedApproaches.map(({ label, color, detail }) => (
+                            <div key={label}>
+                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: `${color}15`, color, fontWeight: 600 }}>{label}</span>
+                              {detail && (
+                                <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, marginTop: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{detail}</div>
+                              )}
+                            </div>
                           ))}
                         </div>
                       );
