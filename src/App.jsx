@@ -22,7 +22,7 @@ const CRISIS_STAGE_BY_TYPE = {
 };
 
 // ホーム画面の「お知らせ」セクションの表示ON/OFF。データ(ANNOUNCEMENTS)は残したまま非表示にする場合はfalseにする。
-const SHOW_ANNOUNCEMENTS = false;
+const SHOW_ANNOUNCEMENTS = true;
 
 export default function App() {
   const t = todayStr();
