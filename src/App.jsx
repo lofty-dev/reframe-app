@@ -130,6 +130,10 @@ export default function App() {
   const [achievementTab, setAchievementTab] = useState("log");
   const [achievementDeleteId, setAchievementDeleteId] = useState(null);
   const [selectedAchievementDate, setSelectedAchievementDate] = useState(null);
+  const [achievementCalendarMonth, setAchievementCalendarMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
 
   const [medicalLogPersonId, setMedicalLogPersonId] = useState(null);
   const [medicalLogDetailId, setMedicalLogDetailId] = useState(null);
@@ -2354,13 +2358,29 @@ export default function App() {
           } else break;
         }
 
-        // カレンダー（今月）
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
+        // カレンダー（表示中の月）
+        const { year, month } = achievementCalendarMonth;
+        const nowForCalendar = new Date();
+        const isCurrentMonth = year === nowForCalendar.getFullYear() && month === nowForCalendar.getMonth();
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth2 = new Date(year, month + 1, 0).getDate();
         const recordedDates = new Set(achievements.map(a => a.date));
+
+        const goToPrevMonth = () => {
+          setAchievementCalendarMonth(prev => {
+            const d = new Date(prev.year, prev.month - 1, 1);
+            return { year: d.getFullYear(), month: d.getMonth() };
+          });
+          setSelectedAchievementDate(null);
+        };
+        const goToNextMonth = () => {
+          if (isCurrentMonth) return;
+          setAchievementCalendarMonth(prev => {
+            const d = new Date(prev.year, prev.month + 1, 1);
+            return { year: d.getFullYear(), month: d.getMonth() };
+          });
+          setSelectedAchievementDate(null);
+        };
 
         const saveAchievement = () => {
           if (!achievementText.trim()) return;
@@ -2438,8 +2458,14 @@ export default function App() {
             {achievementTab === "calendar" && (
               <div key="calendar" className="page">
                 <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px", border: `1px solid ${COLORS.border}`, marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, textAlign: "center", marginBottom: 16 }}>
-                    {year}年{month + 1}月
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 16 }}>
+                    <button onClick={goToPrevMonth} aria-label="前月へ"
+                      style={{ background: "none", border: "none", color: COLORS.text, fontSize: 18, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>‹</button>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, textAlign: "center", minWidth: 90 }}>
+                      {year}年{month + 1}月
+                    </div>
+                    <button onClick={goToNextMonth} disabled={isCurrentMonth} aria-label="翌月へ"
+                      style={{ background: "none", border: "none", color: isCurrentMonth ? COLORS.textMuted : COLORS.text, opacity: isCurrentMonth ? 0.35 : 1, fontSize: 18, fontWeight: 700, cursor: isCurrentMonth ? "default" : "pointer", padding: "4px 8px" }}>›</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
                     {["日", "月", "火", "水", "木", "金", "土"].map((d, i) => (
