@@ -1949,7 +1949,9 @@ export default function App() {
                   <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>「{bridgeMemoSelectDialog.content.slice(0, 40)}{bridgeMemoSelectDialog.content.length > 40 ? "…" : ""}」</div>
                   {bridgeMemoSelectDialog.memos.map(m => (
                     <button key={m.id} onClick={() => {
-                      updateTellReply(m.id, bridgePersonId, bridgeMemoSelectDialog.content);
+                      const existingReply = tellMemos.find(x => x.id === m.id)?.checks[bridgePersonId]?.reply || "";
+                      const nextReply = existingReply ? `${existingReply}\n\n${bridgeMemoSelectDialog.content}` : bridgeMemoSelectDialog.content;
+                      updateTellReply(m.id, bridgePersonId, nextReply);
                       if (!tellMemos.find(x => x.id === m.id)?.checks[bridgePersonId]?.checked) {
                         toggleTellCheck(m.id, bridgePersonId);
                       }
