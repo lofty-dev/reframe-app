@@ -1730,7 +1730,9 @@ export default function App() {
         const person = tellPeople.find(p => p.id === bridgePersonId);
         const bridgeActiveTheme = getActiveTheme(themes, bridgePersonId);
         const personAllMemos = tellMemos.filter(m => m.personIds.includes(bridgePersonId) && bridgeSessionMemoIds.has(m.id));
-        const personPendingMemos = personAllMemos.filter(m => !m.completed);
+        // セッション開始時点で未完了だったメモ（bridgeSessionMemoIdsで絞り込み済み）はそのまま候補にする。
+        // セッション中に完了したメモも紐づけ候補に含めるため、!m.completedでの再絞り込みは行わない。
+        const personPendingMemos = personAllMemos;
         const today = new Date();
         const todayDs = toDateStr(String(today.getFullYear()), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0"));
         const last14 = Array.from({ length: 14 }, (_, i) => {
