@@ -30,6 +30,7 @@ export default function App() {
   const [view, setView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
+  const [cameFromSearchView, setCameFromSearchView] = useState(null);
   const [isDark, setIsDark] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) !== "light"; } catch { return true; }
   });
@@ -221,16 +222,19 @@ export default function App() {
       case "record":
         setDetailId(entry.sourceId);
         setEditing(false);
+        setCameFromSearchView("detail");
         setView("detail");
         setActiveTab("records");
         break;
       case "coping":
         setCopingDetailId(entry.sourceId);
+        setCameFromSearchView("copingDetail");
         setView("copingDetail");
         setActiveTab("tools");
         break;
       case "tellMemo":
         setTellDetailId(entry.sourceId);
+        setCameFromSearchView("tellMemoDetail");
         setView("tellMemoDetail");
         setActiveTab("medical");
         break;
@@ -242,6 +246,7 @@ export default function App() {
           setSelectedAchievementDate(a.date);
         }
         setAchievementTab("calendar");
+        setCameFromSearchView("achievement");
         setView("achievement");
         setActiveTab("records");
         break;
@@ -250,11 +255,13 @@ export default function App() {
         setMemoDetailId(entry.sourceId);
         setMemoEditing(false);
         setMemoView("detail");
+        setCameFromSearchView("memo");
         setView("memo");
         setActiveTab("records");
         break;
       case "theme":
         if (entry.supporterId) setMedicalLogPersonId(entry.supporterId);
+        setCameFromSearchView("medicalLog");
         setView("medicalLog");
         setActiveTab("medical");
         break;
@@ -263,6 +270,7 @@ export default function App() {
         if (c) {
           setCheckinEditDate(c.date);
           setCheckinEditDraft({ mood: c.mood, condition: c.condition, sleep: c.sleep, memo: c.memo || "" });
+          setCameFromSearchView("checkinEdit");
           setView("checkinEdit");
         }
         setActiveTab("home");
@@ -270,6 +278,7 @@ export default function App() {
       }
       case "crisis":
         setCrisisTab(CRISIS_STAGE_BY_TYPE[entry.crisisType]);
+        setCameFromSearchView("crisis");
         setView("crisis");
         setActiveTab("tools");
         break;
@@ -425,13 +434,22 @@ export default function App() {
     }
   }, [view]);
 
+  // 検索結果からの遷移先を離れたら（＝戻る以外の操作で先に進んだら）フラグを消費済み扱いにする。
+  // 深掘り中に別画面を経由してから戻ってきても誤って検索結果に飛ばないようにするためのガード。
+  useEffect(() => {
+    if (cameFromSearchView && view !== cameFromSearchView) {
+      setCameFromSearchView(null);
+    }
+  }, [view, cameFromSearchView]);
+
   useEffect(() => {
     const onPopState = (e) => {
       if (view === "home") {
         return;
       }
       e.preventDefault();
-      if (view === "newCoping") { setView("coping"); }
+      if (cameFromSearchView === view) { setCameFromSearchView(null); setView("search"); }
+      else if (view === "newCoping") { setView("coping"); }
       else if (view === "search") { setView("home"); setActiveTab("home"); }
       else if (view === "checkin" || view === "checkinHistory") { setView("home"); setActiveTab("home"); }
       else if (view === "settings" || view === "guide" || view === "support") { setView("home"); setActiveTab("home"); }
@@ -464,7 +482,7 @@ export default function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [view]);
+  }, [view, cameFromSearchView]);
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
@@ -1239,7 +1257,8 @@ export default function App() {
           {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && (
             <button onClick={() => {
               const goHome = () => { setView("home"); setActiveTab("home"); };
-              if (view === "newCoping") { setView("coping"); }
+              if (cameFromSearchView === view) { setCameFromSearchView(null); setView("search"); }
+              else if (view === "newCoping") { setView("coping"); }
               else if (view === "search") { goHome(); }
               else if (view === "checkinEdit") { setView("checkinHistory"); }
               else if (view === "checkin" || view === "checkinHistory") { goHome(); }
@@ -2443,7 +2462,7 @@ export default function App() {
               style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
               このメモを削除
             </button>
-            <BottomNav onBack={() => setView("tellMemos")} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "tellMemoDetail") { setCameFromSearchView(null); setView("search"); } else { setView("tellMemos"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -2677,7 +2696,7 @@ export default function App() {
               </div>
             )}
 
-            <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "achievement") { setCameFromSearchView(null); setView("search"); } else { setView("records"); setActiveTab("records"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
             {achievementDeleteId && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}>
@@ -3023,7 +3042,7 @@ export default function App() {
               </>
             )}
             <div style={{ padding: "0 16px" }}>
-              <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+              <BottomNav onBack={() => { if (cameFromSearchView === "medicalLog") { setCameFromSearchView(null); setView("search"); } else { setView("medicalTab"); setActiveTab("medical"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
             </div>
           </div>
         );
@@ -3759,7 +3778,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            <BottomNav onBack={() => { setCopingDetailId(null); setView("coping"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "copingDetail") { setCameFromSearchView(null); setView("search"); } else { setCopingDetailId(null); setView("coping"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -4000,7 +4019,7 @@ export default function App() {
             <IconDownload size={16} />PDFとして保存する
           </button>
 
-          <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { if (cameFromSearchView === "crisis") { setCameFromSearchView(null); setView("search"); } else { setView("tools"); setActiveTab("tools"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
           {/* 入力モーダル */}
           {crisisModal && (
@@ -4570,7 +4589,7 @@ export default function App() {
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setView("checkinHistory")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => { if (cameFromSearchView === "checkinEdit") { setCameFromSearchView(null); setView("search"); } else { setView("checkinHistory"); } }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
               <button onClick={() => {
                 setCheckins(prev => upsertCheckin(prev, { date: checkinEditDate, ...checkinEditDraft }));
                 setView("checkinHistory");
@@ -4741,7 +4760,7 @@ export default function App() {
             style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IconDownload size={16} />PDFとして保存する
           </button>
-          <BottomNav onBack={() => { setView("list"); setEditing(false); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { if (cameFromSearchView === "detail") { setCameFromSearchView(null); setView("search"); } else { setView("list"); setEditing(false); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
