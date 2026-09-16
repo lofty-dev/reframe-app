@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell, IconBrandLine, IconX, IconPill } from "@tabler/icons-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop, IconDownload, IconChevronDown, IconChevronUp, IconHelpCircle, IconBell, IconBrandLine, IconX, IconPill, IconSearch } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
 import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, upsertCheckin, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
 import { inpStyle } from "./styles";
+import { buildSearchIndex, searchIndexEntries, truncateGraceful } from "./search";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { DateSelector } from "./components/DateSelector";
@@ -28,6 +29,8 @@ export default function App() {
   const t = todayStr();
   const [view, setView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cameFromSearchView, setCameFromSearchView] = useState(null);
   const [isDark, setIsDark] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) !== "light"; } catch { return true; }
   });
@@ -207,6 +210,89 @@ export default function App() {
     setView("medEvents");
   };
 
+  // 横断検索：各データソースから読み取り専用の検索インデックスを構築（クライアント内フィルタのみ、外部送信なし）
+  const searchIndex = useMemo(
+    () => buildSearchIndex({ records, copings, tellMemos, achievements, memos, themes, checkins, crisisPlan }),
+    [records, copings, tellMemos, achievements, memos, themes, checkins, crisisPlan]
+  );
+  const searchResults = useMemo(() => searchIndexEntries(searchIndex, searchQuery), [searchIndex, searchQuery]);
+
+  const openSearchResult = (entry) => {
+    switch (entry.sourceType) {
+      case "record":
+        setDetailId(entry.sourceId);
+        setEditing(false);
+        setCameFromSearchView("detail");
+        setView("detail");
+        setActiveTab("records");
+        break;
+      case "coping":
+        setCopingDetailId(entry.sourceId);
+        setCameFromSearchView("copingDetail");
+        setView("copingDetail");
+        setActiveTab("tools");
+        break;
+      case "tellMemo":
+        setTellDetailId(entry.sourceId);
+        setCameFromSearchView("tellMemoDetail");
+        setView("tellMemoDetail");
+        setActiveTab("medical");
+        break;
+      case "achievement": {
+        const a = achievements.find((x) => x.id === entry.sourceId);
+        if (a && a.date) {
+          const [y, m] = a.date.split("-");
+          setAchievementCalendarMonth({ year: parseInt(y, 10), month: parseInt(m, 10) - 1 });
+          setSelectedAchievementDate(a.date);
+        }
+        setAchievementTab("calendar");
+        setCameFromSearchView("achievement");
+        setView("achievement");
+        setActiveTab("records");
+        break;
+      }
+      case "memo":
+        setMemoDetailId(entry.sourceId);
+        setMemoEditing(false);
+        setMemoView("detail");
+        setCameFromSearchView("memo");
+        setView("memo");
+        setActiveTab("records");
+        break;
+      case "theme":
+        if (entry.supporterId) setMedicalLogPersonId(entry.supporterId);
+        setCameFromSearchView("medicalLog");
+        setView("medicalLog");
+        setActiveTab("medical");
+        break;
+      case "medicalLog":
+        if (entry.personId != null) setMedicalLogPersonId(entry.personId);
+        setCameFromSearchView("medicalLog");
+        setView("medicalLog");
+        setActiveTab("medical");
+        break;
+      case "checkin": {
+        const c = checkins.find((x) => x.id === entry.sourceId);
+        if (c) {
+          setCheckinEditDate(c.date);
+          setCheckinEditDraft({ mood: c.mood, condition: c.condition, sleep: c.sleep, memo: c.memo || "" });
+          setCameFromSearchView("checkinEdit");
+          setView("checkinEdit");
+        }
+        setActiveTab("home");
+        break;
+      }
+      case "crisis":
+        setCrisisTab(CRISIS_STAGE_BY_TYPE[entry.crisisType]);
+        setCameFromSearchView("crisis");
+        setView("crisis");
+        setActiveTab("tools");
+        break;
+      default:
+        break;
+    }
+  };
+
   // 頓服ワンタップ（ホーム画面）
   const [tonpukuPromptOpen, setTonpukuPromptOpen] = useState(false);
   const [tonpukuToast, setTonpukuToast] = useState(null); // { id }
@@ -354,13 +440,23 @@ export default function App() {
     }
   }, [view]);
 
+  // 検索結果からの遷移先を離れたら（＝戻る以外の操作で先に進んだら）フラグを消費済み扱いにする。
+  // 深掘り中に別画面を経由してから戻ってきても誤って検索結果に飛ばないようにするためのガード。
+  useEffect(() => {
+    if (cameFromSearchView && view !== cameFromSearchView) {
+      setCameFromSearchView(null);
+    }
+  }, [view, cameFromSearchView]);
+
   useEffect(() => {
     const onPopState = (e) => {
       if (view === "home") {
         return;
       }
       e.preventDefault();
-      if (view === "newCoping") { setView("coping"); }
+      if (cameFromSearchView === view) { setCameFromSearchView(null); setView("search"); }
+      else if (view === "newCoping") { setView("coping"); }
+      else if (view === "search") { setView("home"); setActiveTab("home"); }
       else if (view === "checkin" || view === "checkinHistory") { setView("home"); setActiveTab("home"); }
       else if (view === "settings" || view === "guide" || view === "support") { setView("home"); setActiveTab("home"); }
       else if (view === "list") { setView("records"); setActiveTab("records"); }
@@ -392,7 +488,7 @@ export default function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [view]);
+  }, [view, cameFromSearchView]);
 
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCheckins(checkins); }, [checkins]);
@@ -1167,7 +1263,9 @@ export default function App() {
           {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && (
             <button onClick={() => {
               const goHome = () => { setView("home"); setActiveTab("home"); };
-              if (view === "newCoping") { setView("coping"); }
+              if (cameFromSearchView === view) { setCameFromSearchView(null); setView("search"); }
+              else if (view === "newCoping") { setView("coping"); }
+              else if (view === "search") { goHome(); }
               else if (view === "checkinEdit") { setView("checkinHistory"); }
               else if (view === "checkin" || view === "checkinHistory") { goHome(); }
               else if (view === "settings" || view === "guide" || view === "support") { goHome(); }
@@ -1209,6 +1307,7 @@ export default function App() {
             <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700 }}>Stride</div>
             {view !== "home" && (
               <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: COLORS.text }}>
+                {view === "search" && "検索"}
                 {view === "tellMemos" && "伝えたいことメモ"}
                 {view === "tellMemoNew" && "新しいメモを作成"}
                 {view === "tellMemoDetail" && "メモの詳細"}
@@ -1253,6 +1352,12 @@ export default function App() {
           {view === "detail" && !editing && selectedDetail && (
             <button onClick={() => startEdit(selectedDetail)} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, fontWeight: 600, padding: "8px 14px", cursor: "pointer" }}>
               編集
+            </button>
+          )}
+          {view === "home" && (
+            <button onClick={() => { setSearchQuery(""); setView("search"); }}
+              style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+              <IconSearch size={22} />
             </button>
           )}
           {view === "home" && (
@@ -1426,6 +1531,84 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* 横断検索 */}
+      {view === "search" && (() => {
+        const CATEGORY_ORDER = ["record", "coping", "tellMemo", "medicalLog", "achievement", "memo", "theme", "checkin"];
+        const nonCrisisResults = searchResults.filter((e) => e.sourceType !== "crisis");
+        const crisisResults = searchResults.filter((e) => e.sourceType === "crisis");
+        const grouped = CATEGORY_ORDER.map((type) => ({
+          type,
+          entries: nonCrisisResults.filter((e) => e.sourceType === type),
+        })).filter((g) => g.entries.length > 0);
+        const hasQuery = searchQuery.trim().length > 0;
+
+        const resultCard = (entry, key) => (
+          <div key={key} onClick={() => openSearchResult(entry)}
+            style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
+            {entry.date && <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>{formatDate(entry.date)}</div>}
+            <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{truncateGraceful(entry.preview, 70)}</div>
+          </div>
+        );
+
+        return (
+          <div className="page" style={{ padding: "20px 16px calc(80px + env(safe-area-inset-bottom)) 16px" }}>
+            <input
+              type="text"
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="記録・メモなどをキーワードで検索"
+              style={{ ...inpStyle(), marginBottom: 20 }}
+            />
+
+            {!hasQuery && (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0", lineHeight: 1.7 }}>
+                ストレス記録・コーピング・伝えたいことメモ・診察等の記録・できたことログ・メモ・テーマ・チェックイン・クライシスプランを横断してキーワード検索できます。
+              </div>
+            )}
+
+            {hasQuery && searchResults.length === 0 && (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>
+                「{searchQuery}」に一致する記録は見つかりませんでした
+              </div>
+            )}
+
+            {hasQuery && grouped.map((g) => (
+              <div key={g.type} style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.accentText, letterSpacing: 1, marginBottom: 8 }}>
+                  {g.entries[0].categoryLabel}（{g.entries.length}件）
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {g.entries.map((entry) => resultCard(entry, `${entry.sourceType}_${entry.sourceId}${entry.personId != null ? `_${entry.personId}` : ""}`))}
+                </div>
+              </div>
+            ))}
+
+            {hasQuery && crisisResults.length > 0 && (
+              <div style={{ marginTop: 8, padding: "14px 14px 6px", borderRadius: 14, background: `${COLORS.danger}0f`, border: `1.5px solid ${COLORS.danger}40` }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.danger, letterSpacing: 1, marginBottom: 10 }}>
+                  クライシスプラン（{crisisResults.length}件）
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                  {crisisResults.map((entry) => (
+                    <div key={`crisis_${entry.sourceId}`} onClick={() => openSearchResult(entry)}
+                      style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.danger}30`, cursor: "pointer" }}>
+                      <div style={{ fontSize: 11, color: COLORS.danger, fontWeight: 700, marginBottom: 6 }}>{entry.crisisSubLabel}</div>
+                      <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.7 }}>{truncateGraceful(entry.text1, 160)}</div>
+                      {entry.text2 && (
+                        <div style={{ fontSize: 13, color: COLORS.danger, borderTop: `1px solid ${COLORS.border}`, paddingTop: 6, marginTop: 6, lineHeight: 1.7 }}>
+                          対処法：{truncateGraceful(entry.text2, 160)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* RECORDS TAB */}
       {view === "records" && (
@@ -2285,7 +2468,7 @@ export default function App() {
               style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
               このメモを削除
             </button>
-            <BottomNav onBack={() => setView("tellMemos")} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "tellMemoDetail") { setCameFromSearchView(null); setView("search"); } else { setView("tellMemos"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -2519,7 +2702,7 @@ export default function App() {
               </div>
             )}
 
-            <BottomNav onBack={() => { setView("records"); setActiveTab("records"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "achievement") { setCameFromSearchView(null); setView("search"); } else { setView("records"); setActiveTab("records"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
             {achievementDeleteId && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}>
@@ -2865,7 +3048,7 @@ export default function App() {
               </>
             )}
             <div style={{ padding: "0 16px" }}>
-              <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+              <BottomNav onBack={() => { if (cameFromSearchView === "medicalLog") { setCameFromSearchView(null); setView("search"); } else { setView("medicalTab"); setActiveTab("medical"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
             </div>
           </div>
         );
@@ -3601,7 +3784,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            <BottomNav onBack={() => { setCopingDetailId(null); setView("coping"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            <BottomNav onBack={() => { if (cameFromSearchView === "copingDetail") { setCameFromSearchView(null); setView("search"); } else { setCopingDetailId(null); setView("coping"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
           </div>
         );
       })()}
@@ -3842,7 +4025,7 @@ export default function App() {
             <IconDownload size={16} />PDFとして保存する
           </button>
 
-          <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { if (cameFromSearchView === "crisis") { setCameFromSearchView(null); setView("search"); } else { setView("tools"); setActiveTab("tools"); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
           {/* 入力モーダル */}
           {crisisModal && (
@@ -4412,7 +4595,7 @@ export default function App() {
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setView("checkinHistory")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => { if (cameFromSearchView === "checkinEdit") { setCameFromSearchView(null); setView("search"); } else { setView("checkinHistory"); } }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
               <button onClick={() => {
                 setCheckins(prev => upsertCheckin(prev, { date: checkinEditDate, ...checkinEditDraft }));
                 setView("checkinHistory");
@@ -4583,7 +4766,7 @@ export default function App() {
             style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <IconDownload size={16} />PDFとして保存する
           </button>
-          <BottomNav onBack={() => { setView("list"); setEditing(false); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { if (cameFromSearchView === "detail") { setCameFromSearchView(null); setView("search"); } else { setView("list"); setEditing(false); } }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
