@@ -18,6 +18,7 @@ const SLEEP_DISPLAY = { "4〜6時間未満": "4〜5時間", "6〜8時間未満":
 export const sleepLabel = (s) => SLEEP_DISPLAY[s] || s;
 
 export const ANNOUNCEMENTS = [
+  { date: "2026/09/16", content: "アプリ内に記録した内容を、キーワードで横断検索できるようになりました。ホーム画面の検索アイコンから使えます。" },
   { date: "2026/09/11", content: "チェックインを忘れた日も、あとから記録を追加できるようになりました。履歴の「一覧」タブから、記録がない日を選んで入力できます。" },
 ];
 
