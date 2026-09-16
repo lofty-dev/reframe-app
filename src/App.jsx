@@ -31,6 +31,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
   const [cameFromSearchView, setCameFromSearchView] = useState(null);
+  const [scrollHighlightTarget, setScrollHighlightTarget] = useState(null);
   const [isDark, setIsDark] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) !== "light"; } catch { return true; }
   });
@@ -268,6 +269,7 @@ export default function App() {
       case "medicalLog":
         if (entry.personId != null) setMedicalLogPersonId(entry.personId);
         setCameFromSearchView("medicalLog");
+        setScrollHighlightTarget(`medicalLog-${entry.sourceId}`);
         setView("medicalLog");
         setActiveTab("medical");
         break;
@@ -285,6 +287,7 @@ export default function App() {
       case "crisis":
         setCrisisTab(CRISIS_STAGE_BY_TYPE[entry.crisisType]);
         setCameFromSearchView("crisis");
+        setScrollHighlightTarget(`crisis-${entry.sourceId}`);
         setView("crisis");
         setActiveTab("tools");
         break;
@@ -505,6 +508,7 @@ export default function App() {
   useEffect(() => { saveMedSettings(medSettings); }, [medSettings]);
   useEffect(() => { if (showPrivacy) { window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); } }, [showPrivacy]);
   useEffect(() => {
+    if (scrollHighlightTarget) return; // 検索結果からのハイライト対象がある場合は、そちらのスクロール処理に任せる
     const resetScroll = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
@@ -513,6 +517,18 @@ export default function App() {
     resetScroll();
     requestAnimationFrame(resetScroll);
   }, [view]);
+
+  // 検索結果からのディープリンク先で、該当項目まで自動スクロール＋一時ハイライトする
+  useEffect(() => {
+    if (!scrollHighlightTarget) return;
+    if (view !== "medicalLog" && view !== "crisis") return;
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById(`search-target-${scrollHighlightTarget}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    const timer = setTimeout(() => setScrollHighlightTarget(null), 2200);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
+  }, [view, scrollHighlightTarget]);
 
   useEffect(() => {
     if (view !== "mindfulness" && mfRunning) {
@@ -1255,6 +1271,11 @@ export default function App() {
         .page { animation: fadeIn 0.18s ease-out; }
         body { padding-bottom: env(safe-area-inset-bottom); }
         .main-wrapper { min-height: 100vh; min-height: 100dvh; }
+        @keyframes searchHighlightFade {
+          from { background: ${COLORS.accent}30; }
+          to { background: transparent; }
+        }
+        .search-highlight { animation: searchHighlightFade 2s ease-out; }
       `}</style>
 
       {/* Header */}
@@ -3020,7 +3041,9 @@ export default function App() {
                     personMemos.map(m => {
                       const check = m.checks[currentPersonId] || { checked: false, reply: "" };
                       return (
-                        <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 14 }}>
+                        <div key={m.id} id={`search-target-medicalLog-${m.id}`}
+                          className={scrollHighlightTarget === `medicalLog-${m.id}` ? "search-highlight" : undefined}
+                          style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 14 }}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                             <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
                             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -3896,7 +3919,9 @@ export default function App() {
               <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 12 }}>安定しているときの自分の状態を書いておこう</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
                 {crisisPlan.safe.map((item) => (
-                  <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div key={item.id} id={`search-target-crisis-${item.id}`}
+                    className={scrollHighlightTarget === `crisis-${item.id}` ? "search-highlight" : undefined}
+                    style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.accent}30`, display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
                     <button onClick={() => setCrisisModal({ type: "safe", editId: item.id, text: item.text, text2: "" })}
                       style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, cursor: "pointer", fontSize: 12, padding: "4px 10px" }}>編集</button>
@@ -3924,7 +3949,9 @@ export default function App() {
                 <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>トリガー（ストレスになりうるもの）</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
                   {crisisPlan.caution_triggers.map((item) => (
-                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
+                    <div key={item.id} id={`search-target-crisis-${item.id}`}
+                      className={scrollHighlightTarget === `crisis-${item.id}` ? "search-highlight" : undefined}
+                      style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 6 }}>{item.text}</div>
@@ -3947,7 +3974,9 @@ export default function App() {
                 <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>注意サイン（体・気持ちの変化）</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
                   {crisisPlan.caution_signs.map((item) => (
-                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
+                    <div key={item.id} id={`search-target-crisis-${item.id}`}
+                      className={scrollHighlightTarget === `crisis-${item.id}` ? "search-highlight" : undefined}
+                      style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid #e0a85530` }}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 6 }}>{item.text}</div>
@@ -3981,7 +4010,9 @@ export default function App() {
                 <div style={{ fontSize: 11, color: COLORS.danger, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>危機のサイン</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
                   {crisisPlan.crisis_signs.map((item) => (
-                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
+                    <div key={item.id} id={`search-target-crisis-${item.id}`}
+                      className={scrollHighlightTarget === `crisis-${item.id}` ? "search-highlight" : undefined}
+                      style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, fontSize: 14, color: COLORS.text }}>{item.text}</div>
                         <button onClick={() => setCrisisModal({ type: "crisis_signs", editId: item.id, text: item.text, text2: "" })}
@@ -4001,7 +4032,9 @@ export default function App() {
                 <div style={{ fontSize: 11, color: COLORS.danger, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>対処法・連絡先</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
                   {crisisPlan.crisis_contacts.map((item) => (
-                    <div key={item.id} style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
+                    <div key={item.id} id={`search-target-crisis-${item.id}`}
+                      className={scrollHighlightTarget === `crisis-${item.id}` ? "search-highlight" : undefined}
+                      style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${COLORS.danger}30` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 1.6 }}>{item.text}</div>
                         <button onClick={() => setCrisisModal({ type: "crisis_contacts", editId: item.id, text: item.text, text2: "" })}
