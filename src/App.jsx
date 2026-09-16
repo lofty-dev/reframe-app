@@ -142,6 +142,14 @@ export default function App() {
   const [medicalLogPersonId, setMedicalLogPersonId] = useState(null);
   const [medicalLogDetailId, setMedicalLogDetailId] = useState(null);
   const [medicalLogEditDraft, setMedicalLogEditDraft] = useState({ date: "", content: "", reply: "" });
+  const [medicalLogVisibleCount, setMedicalLogVisibleCount] = useState(10);
+  // 検索結果からの遷移で表示件数を意図的に拡張する際、直後に走るこのリセットeffectに
+  // 上書きされないよう、そのケースだけ1回だけスキップする
+  const skipMedicalLogVisibleResetRef = useRef(false);
+  useEffect(() => {
+    if (skipMedicalLogVisibleResetRef.current) { skipMedicalLogVisibleResetRef.current = false; return; }
+    setMedicalLogVisibleCount(10);
+  }, [medicalLogPersonId]);
 
   const [themes, setThemes] = useState(loadThemes);
   const [themeDialog, setThemeDialog] = useState(null); // { supporterId, themeId (nullなら新規), text }
@@ -268,13 +276,28 @@ export default function App() {
         setView("medicalLog");
         setActiveTab("medical");
         break;
-      case "medicalLog":
-        if (entry.personId != null) setMedicalLogPersonId(entry.personId);
+      case "medicalLog": {
+        const isBridgeEntry = !!entry.isBridgeMemo;
+        if (entry.personId != null) {
+          if (!isBridgeEntry && entry.personId !== medicalLogPersonId) {
+            skipMedicalLogVisibleResetRef.current = true;
+          }
+          setMedicalLogPersonId(entry.personId);
+        }
+        if (!isBridgeEntry && entry.personId != null) {
+          // 遷移先のpersonMemosと同じ絞り込み・ソートを再現し、対象が表示範囲外なら表示件数を広げる
+          const personMemosForTarget = tellMemos
+            .filter((m) => m.completed && m.personIds.includes(entry.personId))
+            .sort((a, b) => b.date.localeCompare(a.date));
+          const idx = personMemosForTarget.findIndex((m) => m.id === entry.sourceId);
+          setMedicalLogVisibleCount(idx >= 10 ? Math.ceil((idx + 1) / 10) * 10 : 10);
+        }
         setCameFromSearchView("medicalLog");
-        setScrollHighlightTarget(`medicalLog-${entry.isBridgeMemo ? `bridge_${entry.sourceId}` : entry.sourceId}`);
+        setScrollHighlightTarget(`medicalLog-${isBridgeEntry ? `bridge_${entry.sourceId}` : entry.sourceId}`);
         setView("medicalLog");
         setActiveTab("medical");
         break;
+      }
       case "checkin": {
         const c = checkins.find((x) => x.id === entry.sourceId);
         if (c) {
@@ -3029,7 +3052,7 @@ export default function App() {
                   {personMemos.length === 0 ? (
                     <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 32 }}>記録がありません</div>
                   ) : (
-                    personMemos.map(m => {
+                    personMemos.slice(0, medicalLogVisibleCount).map(m => {
                       const check = m.checks[currentPersonId] || { checked: false, reply: "" };
                       return (
                         <div key={m.id} id={`search-target-medicalLog-${m.id}`}
@@ -3057,6 +3080,12 @@ export default function App() {
                         </div>
                       );
                     })
+                  )}
+                  {personMemos.length > medicalLogVisibleCount && (
+                    <button onClick={() => setMedicalLogVisibleCount(medicalLogVisibleCount + 10)}
+                      style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer", marginTop: 4 }}>
+                      もっと見る（残り{personMemos.length - medicalLogVisibleCount}件）
+                    </button>
                   )}
                 </div>
 
