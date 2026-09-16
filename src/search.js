@@ -13,7 +13,7 @@ export const CRISIS_SUB_LABELS = {
 
 const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
 
-export const buildSearchIndex = ({ records, copings, tellMemos, achievements, memos, themes, checkins, crisisPlan }) => {
+export const buildSearchIndex = ({ records, copings, tellMemos, bridgeMemos, achievements, memos, themes, checkins, crisisPlan }) => {
   const index = [];
 
   (records || []).forEach((r) => {
@@ -75,6 +75,20 @@ export const buildSearchIndex = ({ records, copings, tellMemos, achievements, me
         date: m.date || null,
         categoryLabel: "診察等の記録",
       });
+    });
+  });
+
+  (bridgeMemos || []).forEach((m) => {
+    if (!isNonEmptyString(m.content)) return;
+    index.push({
+      sourceType: "medicalLog",
+      sourceId: m.id,
+      personId: m.personId,
+      isBridgeMemo: true,
+      text: m.content,
+      preview: m.content,
+      date: m.date || null,
+      categoryLabel: "診察等の記録",
     });
   });
 
