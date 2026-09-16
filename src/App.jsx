@@ -265,6 +265,12 @@ export default function App() {
         setView("medicalLog");
         setActiveTab("medical");
         break;
+      case "medicalLog":
+        if (entry.personId != null) setMedicalLogPersonId(entry.personId);
+        setCameFromSearchView("medicalLog");
+        setView("medicalLog");
+        setActiveTab("medical");
+        break;
       case "checkin": {
         const c = checkins.find((x) => x.id === entry.sourceId);
         if (c) {
@@ -1528,7 +1534,7 @@ export default function App() {
 
       {/* 横断検索 */}
       {view === "search" && (() => {
-        const CATEGORY_ORDER = ["record", "coping", "tellMemo", "achievement", "memo", "theme", "checkin"];
+        const CATEGORY_ORDER = ["record", "coping", "tellMemo", "medicalLog", "achievement", "memo", "theme", "checkin"];
         const nonCrisisResults = searchResults.filter((e) => e.sourceType !== "crisis");
         const crisisResults = searchResults.filter((e) => e.sourceType === "crisis");
         const grouped = CATEGORY_ORDER.map((type) => ({
@@ -1558,7 +1564,7 @@ export default function App() {
 
             {!hasQuery && (
               <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0", lineHeight: 1.7 }}>
-                ストレス記録・コーピング・伝えたいことメモ・できたことログ・メモ・テーマ・チェックイン・クライシスプランを横断してキーワード検索できます。
+                ストレス記録・コーピング・伝えたいことメモ・診察等の記録・できたことログ・メモ・テーマ・チェックイン・クライシスプランを横断してキーワード検索できます。
               </div>
             )}
 
@@ -1574,7 +1580,7 @@ export default function App() {
                   {g.entries[0].categoryLabel}（{g.entries.length}件）
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {g.entries.map((entry) => resultCard(entry, `${entry.sourceType}_${entry.sourceId}`))}
+                  {g.entries.map((entry) => resultCard(entry, `${entry.sourceType}_${entry.sourceId}${entry.personId != null ? `_${entry.personId}` : ""}`))}
                 </div>
               </div>
             ))}

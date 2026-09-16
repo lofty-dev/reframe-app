@@ -46,16 +46,35 @@ export const buildSearchIndex = ({ records, copings, tellMemos, achievements, me
   });
 
   (tellMemos || []).forEach((m) => {
-    const replies = m.checks ? Object.values(m.checks).map((c) => c && c.reply).filter(isNonEmptyString) : [];
-    const parts = [m.content, ...replies].filter(isNonEmptyString);
-    if (parts.length === 0) return;
-    index.push({
-      sourceType: "tellMemo",
-      sourceId: m.id,
-      text: parts.join(" "),
-      preview: isNonEmptyString(m.content) ? m.content : parts[0],
-      date: m.date || null,
-      categoryLabel: "伝えたいことメモ",
+    if (!m.completed) {
+      // 「完了」タブの条件（m.completed）に一致しないもの＝未完了のみ、従来通り1メモ=1エントリ
+      const replies = m.checks ? Object.values(m.checks).map((c) => c && c.reply).filter(isNonEmptyString) : [];
+      const parts = [m.content, ...replies].filter(isNonEmptyString);
+      if (parts.length === 0) return;
+      index.push({
+        sourceType: "tellMemo",
+        sourceId: m.id,
+        text: parts.join(" "),
+        preview: isNonEmptyString(m.content) ? m.content : parts[0],
+        date: m.date || null,
+        categoryLabel: "伝えたいことメモ",
+      });
+      return;
+    }
+    // 完了済み（m.completed）は「診察等の記録」画面と重複するため、そちらのカテゴリとして人物単位で分割する
+    (m.personIds || []).forEach((personId) => {
+      const reply = m.checks?.[personId]?.reply;
+      const parts = [m.content, reply].filter(isNonEmptyString);
+      if (parts.length === 0) return;
+      index.push({
+        sourceType: "medicalLog",
+        sourceId: m.id,
+        personId,
+        text: parts.join(" "),
+        preview: isNonEmptyString(m.content) ? m.content : parts[0],
+        date: m.date || null,
+        categoryLabel: "診察等の記録",
+      });
     });
   });
 
