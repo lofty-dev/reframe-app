@@ -120,6 +120,9 @@ export const updateThemeText = (themes, themeId, text) => {
 export const deleteThemesForSupporter = (themes, supporterId) =>
   themes.filter(th => th.supporterId !== supporterId);
 
+export const deleteBridgeMemosForSupporter = (bridgeMemos, supporterId) =>
+  bridgeMemos.filter(m => m.personId !== supporterId);
+
 export const loadMedEvents = () => {
   try { const s = localStorage.getItem(MED_EVENTS_KEY); if (s) { const p = JSON.parse(s); if (Array.isArray(p)) return p; } } catch (e) {}
   return [];

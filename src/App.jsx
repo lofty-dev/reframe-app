@@ -3,7 +3,7 @@ import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { THEME_KEY, COLORS, COLORS_DARK, COLORS_LIGHT, ANNOUNCEMENTS, CBT3_STEPS, CBT_STEPS, STRESS_CATEGORIES, STRESS_INTENSITIES, COG_PATTERNS, PS_STEPS, TAB_VIEWS, HELP_CONTENT, ONBOARDING_SLIDES, TELL_PERSON_TYPES, sleepLabel, THEME_TEXT_MAX, THEME_PLACEHOLDER, MED_EVENT_TYPES, medEventTypeLabel, MED_LABEL_MAX, MED_NOTE_MAX } from "./constants";
-import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, upsertCheckin, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
+import { todayStr, toDateStr, formatDate, formatDateShort, loadRecords, saveRecords, loadCheckins, saveCheckins, upsertCheckin, loadCopings, saveCopings, loadCrisisPlan, saveCrisisPlan, loadAchievements, saveAchievements, loadMemo, saveMemo, loadTellPeople, saveTellPeople, loadTellMemos, saveTellMemos, loadBridgeSettings, saveBridgeSettings, loadBridgeMemos, saveBridgeMemos, loadThemes, saveThemes, getActiveTheme, createTheme, closeTheme, updateThemeText, deleteThemesForSupporter, deleteBridgeMemosForSupporter, exportData, importData, hasAgreed, setAgreed, hasOnboarded, setOnboarded, hasPwaPrompted, setPwaPrompted, hasThemeSelected, setThemeSelected, loadMedEvents, saveMedEvents, loadMedSettings, saveMedSettings, addMedEvent, updateMedEvent, deleteMedEvent, recentMedLabels, generateMedEventId } from "./storage";
 import { inpStyle } from "./styles";
 import { buildSearchIndex, searchIndexEntries, truncateGraceful } from "./search";
 import { BottomNav, BottomTabBar } from "./components/BottomNav";
@@ -211,10 +211,12 @@ export default function App() {
     setView("medEvents");
   };
 
+  const [bridgeMemos, setBridgeMemos] = useState(loadBridgeMemos);
+
   // 横断検索：各データソースから読み取り専用の検索インデックスを構築（クライアント内フィルタのみ、外部送信なし）
   const searchIndex = useMemo(
-    () => buildSearchIndex({ records, copings, tellMemos, achievements, memos, themes, checkins, crisisPlan }),
-    [records, copings, tellMemos, achievements, memos, themes, checkins, crisisPlan]
+    () => buildSearchIndex({ records, copings, tellMemos, bridgeMemos, achievements, memos, themes, checkins, crisisPlan }),
+    [records, copings, tellMemos, bridgeMemos, achievements, memos, themes, checkins, crisisPlan]
   );
   const searchResults = useMemo(() => searchIndexEntries(searchIndex, searchQuery), [searchIndex, searchQuery]);
 
@@ -269,7 +271,7 @@ export default function App() {
       case "medicalLog":
         if (entry.personId != null) setMedicalLogPersonId(entry.personId);
         setCameFromSearchView("medicalLog");
-        setScrollHighlightTarget(`medicalLog-${entry.sourceId}`);
+        setScrollHighlightTarget(`medicalLog-${entry.isBridgeMemo ? `bridge_${entry.sourceId}` : entry.sourceId}`);
         setView("medicalLog");
         setActiveTab("medical");
         break;
@@ -320,7 +322,6 @@ export default function App() {
   };
 
   const [bridgeSettings, setBridgeSettings] = useState(loadBridgeSettings);
-  const [bridgeMemos, setBridgeMemos] = useState(loadBridgeMemos);
   const [bridgeMemoInput, setBridgeMemoInput] = useState("");
   const [bridgePersonId, setBridgePersonId] = useState(null);
   const [bridgeSessionMemoIds, setBridgeSessionMemoIds] = useState(new Set());
@@ -1601,7 +1602,7 @@ export default function App() {
                   {g.entries[0].categoryLabel}（{g.entries.length}件）
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {g.entries.map((entry) => resultCard(entry, `${entry.sourceType}_${entry.sourceId}${entry.personId != null ? `_${entry.personId}` : ""}`))}
+                  {g.entries.map((entry) => resultCard(entry, `${entry.sourceType}_${entry.isBridgeMemo ? `bridge_${entry.sourceId}` : entry.sourceId}${entry.personId != null ? `_${entry.personId}` : ""}`))}
                 </div>
               </div>
             ))}
@@ -2112,19 +2113,6 @@ export default function App() {
                     </div>
                   ))
                 )}
-              </div>
-            )}
-
-            {/* 過去のメモ */}
-            {bridgeMemos.filter(m => m.personId === bridgePersonId).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>過去のメモ</div>
-                {bridgeMemos.filter(m => m.personId === bridgePersonId).map(m => (
-                  <div key={m.id} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
-                    <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
-                  </div>
-                ))}
               </div>
             )}
 
@@ -2951,12 +2939,15 @@ export default function App() {
       {/* MEDICAL LOG */}
       {view === "medicalLog" && (() => {
         const completedMemos = tellMemos.filter(m => m.completed);
-        const activePeople = tellPeople.filter(p => completedMemos.some(m => m.personIds.includes(p.id)));
+        const activePeople = tellPeople.filter(p => completedMemos.some(m => m.personIds.includes(p.id)) || bridgeMemos.some(m => m.personId === p.id));
         const currentPersonId = medicalLogPersonId && activePeople.some(p => p.id === medicalLogPersonId)
           ? medicalLogPersonId
           : activePeople[0]?.id ?? null;
         const personMemos = currentPersonId
           ? [...completedMemos.filter(m => m.personIds.includes(currentPersonId))].sort((a, b) => b.date.localeCompare(a.date))
+          : [];
+        const personBridgeMemos = currentPersonId
+          ? [...bridgeMemos.filter(m => m.personId === currentPersonId)].sort((a, b) => b.date.localeCompare(a.date))
           : [];
 
         return (
@@ -3068,6 +3059,21 @@ export default function App() {
                     })
                   )}
                 </div>
+
+                {/* 単独メモ（Bridge Sessionで単独保存されたメモ） */}
+                {personBridgeMemos.length > 0 && (
+                  <div style={{ padding: "16px 16px 0" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>単独メモ</div>
+                    {personBridgeMemos.map(m => (
+                      <div key={m.id} id={`search-target-medicalLog-bridge_${m.id}`}
+                        className={scrollHighlightTarget === `medicalLog-bridge_${m.id}` ? "search-highlight" : undefined}
+                        style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
+                        <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
             <div style={{ padding: "0 16px" }}>
@@ -5500,7 +5506,7 @@ export default function App() {
               <button onClick={() => setTellPersonDeleteId(null)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
                 キャンセル
               </button>
-              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellMemos(prev => prev.map(m => ({ ...m, personIds: m.personIds.filter(pid => pid !== tellPersonDeleteId), checks: Object.fromEntries(Object.entries(m.checks).filter(([k]) => k !== String(tellPersonDeleteId))) }))); setThemes(prev => deleteThemesForSupporter(prev, tellPersonDeleteId)); setTellPersonDeleteId(null); }}
+              <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellMemos(prev => prev.map(m => ({ ...m, personIds: m.personIds.filter(pid => pid !== tellPersonDeleteId), checks: Object.fromEntries(Object.entries(m.checks).filter(([k]) => k !== String(tellPersonDeleteId))) }))); setThemes(prev => deleteThemesForSupporter(prev, tellPersonDeleteId)); setBridgeMemos(prev => deleteBridgeMemosForSupporter(prev, tellPersonDeleteId)); setTellPersonDeleteId(null); }}
                 style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
                 削除する
               </button>
